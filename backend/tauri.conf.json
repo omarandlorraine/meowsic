@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "mirage",
+  "version": "1.0.0",
+  "identifier": "com.cyan.mirage",
+  "build": {
+    "beforeDevCommand": "pnpm vite:dev",
+    "beforeBuildCommand": "pnpm vite:build",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "mirage",
+        "label": "main",
+        "decorations": false,
+        "width": 1600,
+        "height": 900,
+        "center": true,
+        "resizable": false
+      }
+    ],
+    "security": {
+      "csp": null,
+      "devCsp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["**/*"]
+      }
+    }
+  }
+}
