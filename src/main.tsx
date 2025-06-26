@@ -4,14 +4,22 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createBrowserRouter, RouterProvider } from 'react-router'
-import { Window } from '@/components/windows'
+import { Window } from '@/components/window'
 import { HomeScreen } from '@/components/home'
 
 const router = createBrowserRouter([
   {
     path: '/',
     Component: Window,
-    children: [{ path: '/', Component: HomeScreen }],
+    children: [
+      { path: '/', Component: HomeScreen },
+      { path: '/queue', Component: HomeScreen },
+      { path: '/playlists', Component: HomeScreen },
+      { path: '/tracks', Component: HomeScreen },
+      { path: '/artists', Component: HomeScreen },
+      { path: '/albums', Component: HomeScreen },
+      { path: '/settings', Component: HomeScreen },
+    ],
   },
 ])
 

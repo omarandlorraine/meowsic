@@ -4,7 +4,7 @@ import { invoke } from '@tauri-apps/api/core'
 export function HomeScreen() {
   return (
     <div className="p-6 flex gap-6 self-start">
-      <Button
+      {/* <Button
         onPress={() => {
           invoke('play')
         }}>
@@ -16,7 +16,7 @@ export function HomeScreen() {
           invoke('pause')
         }}>
         Pause
-      </Button>
+      </Button> */}
     </div>
   )
 }

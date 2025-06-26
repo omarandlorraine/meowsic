@@ -22,14 +22,10 @@ async fn main() -> Result<()> {
     let mut player = Player::new(sink)?;
     let db = Db::new("meowsic.db").await?;
 
-    player.queue.push("test1.m4a".into());
-
-    player.start();
-
-    db.init().await?;
-    db.set_dirs(&["D:/music"]).await?;
-    let dirs = db.get_dirs().await?;
-    db.scan(&dirs).await?;
+    // db.init().await?;
+    // db.set_dirs(&["D:/music"]).await?;
+    // let dirs = db.get_dirs().await?;
+    // db.scan(&dirs).await?;
 
     let state = AppState { player, db };
 
