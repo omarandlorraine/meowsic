@@ -1,64 +1,48 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod art;
-mod genshin;
-mod utils;
+mod commands;
+mod player;
+mod track;
 
-use anyhow::{Result, anyhow};
-use art::Api as ArtApi;
-use genshin::api::Api as GenshinApi;
-use genshin::handlers::{
-    genshin_character_id, genshin_get_character_list, genshin_get_local_character,
-    genshin_save_character,
-};
+use anyhow::Result;
+use player::Player;
+use rodio::{OutputStream, Sink};
 use serde::Serialize;
-use std::path::PathBuf;
+
+use crate::track::Track;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let data_dir_path = if cfg!(debug_assertions) {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../data")
-    } else {
-        let exe_path = std::env::current_exe()?;
-        exe_path.parent().map(|x| x.join("data")).ok_or_else(|| {
-            anyhow!(
-                "failed to get parent directory of executable: {}",
-                exe_path.display()
-            )
-        })?
-    };
+    // ! DO NOT DROP _stream (don't assign to just '_')
+    let (_stream, handle) = OutputStream::try_default()?;
+    let sink = Sink::try_new(&handle)?;
+    let player = Player::new(sink)?;
 
-    let genshin_api = GenshinApi::new(data_dir_path.clone())?;
-    let art_api = ArtApi::new(data_dir_path.clone())?;
+    let state = AppState { player };
 
-    let state = AppState {
-        data_dir_path,
-        genshin_api,
-        art_api,
-    };
+    let t = Track::new("test1.m4a")?;
+    dbg!(&t.tags);
+    let t = Track::new("test2.m4a")?;
+    dbg!(&t.tags);
+    let t = Track::new("test3.mp3")?;
+    dbg!(&t.tags);
+    let t = Track::new("test4.mp3")?;
+    dbg!(&t.tags);
 
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
         .manage(state)
-        .invoke_handler(tauri::generate_handler![
-            genshin_get_character_list,
-            genshin_get_local_character,
-            genshin_save_character,
-            genshin_character_id
-        ])
+        .invoke_handler(tauri::generate_handler![commands::play, commands::pause,])
         .run(tauri::generate_context!())?;
 
     Ok(())
 }
 
-#[derive(Debug, Clone)]
 struct AppState {
-    data_dir_path: PathBuf,
-    genshin_api: GenshinApi,
-    art_api: ArtApi,
+    player: Player,
 }
 
 #[derive(Debug, Clone, Serialize)]
