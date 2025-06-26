@@ -20,3 +20,5 @@ rodio = { version = "0.20.1", default-features = false, features = [
     "symphonia-all",
 ] }
 symphonia = { version = "0.5", features = ["all"] }
+sqlx = { version = "0.8.6", features = ["runtime-tokio", "sqlite"] }
+walkdir = "2.5.0"

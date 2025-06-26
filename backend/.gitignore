@@ -6,6 +6,9 @@
 # will have schema files for capabilities auto-completion
 /gen/schemas
 
+# Database
+*.db
+
 # Audio Files
 *.mp3
 *.m4a

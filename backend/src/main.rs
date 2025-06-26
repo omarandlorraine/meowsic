@@ -2,33 +2,36 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod commands;
+mod db;
 mod player;
-mod track;
+mod tracks;
+mod utils;
 
 use anyhow::Result;
+use db::Db;
 use player::Player;
 use rodio::{OutputStream, Sink};
 use serde::Serialize;
-
-use crate::track::Track;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // ! DO NOT DROP _stream (don't assign to just '_')
     let (_stream, handle) = OutputStream::try_default()?;
     let sink = Sink::try_new(&handle)?;
-    let player = Player::new(sink)?;
 
-    let state = AppState { player };
+    let mut player = Player::new(sink)?;
+    let db = Db::new("meowsic.db").await?;
 
-    let t = Track::new("test1.m4a")?;
-    dbg!(&t.tags);
-    let t = Track::new("test2.m4a")?;
-    dbg!(&t.tags);
-    let t = Track::new("test3.mp3")?;
-    dbg!(&t.tags);
-    let t = Track::new("test4.mp3")?;
-    dbg!(&t.tags);
+    player.queue.push("test1.m4a".into());
+
+    player.start();
+
+    db.init().await?;
+    db.set_dirs(&["D:/music"]).await?;
+    let dirs = db.get_dirs().await?;
+    db.scan(&dirs).await?;
+
+    let state = AppState { player, db };
 
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::new().build())
@@ -43,6 +46,7 @@ async fn main() -> Result<()> {
 
 struct AppState {
     player: Player,
+    db: Db,
 }
 
 #[derive(Debug, Clone, Serialize)]
