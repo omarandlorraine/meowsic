@@ -9,9 +9,11 @@ mod utils;
 
 use anyhow::Result;
 use db::Db;
+use parking_lot::Mutex;
 use player::Player;
 use rodio::{OutputStream, Sink};
 use serde::Serialize;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -19,7 +21,7 @@ async fn main() -> Result<()> {
     let (_stream, handle) = OutputStream::try_default()?;
     let sink = Sink::try_new(&handle)?;
 
-    let mut player = Player::new(sink)?;
+    let player = Arc::new(Mutex::new(Player::new(sink)?));
     let db = Db::new("meowsic.db").await?;
 
     // db.init().await?;
@@ -34,14 +36,20 @@ async fn main() -> Result<()> {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
         .manage(state)
-        .invoke_handler(tauri::generate_handler![commands::play, commands::pause,])
+        .invoke_handler(tauri::generate_handler![
+            commands::player_set_queue,
+            commands::player_goto,
+            commands::player_play,
+            commands::player_pause,
+            commands::get_tracks
+        ])
         .run(tauri::generate_context!())?;
 
     Ok(())
 }
 
 struct AppState {
-    player: Player,
+    player: Arc<Mutex<Player>>,
     db: Db,
 }
 

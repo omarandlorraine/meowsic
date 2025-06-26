@@ -96,6 +96,11 @@ impl Player {
         self.sink.pause();
     }
 
+    pub fn set_queue(&mut self, queue: Vec<PathBuf>) {
+        self.queue = queue;
+        self.current = 0;
+    }
+
     pub fn set_volume(&self, volume: f32) {
         self.sink.set_volume(volume);
     }

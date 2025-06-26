@@ -1,22 +1,15 @@
+import { usePlayer } from '@/player'
 import { Button } from '@heroui/react'
-import { invoke } from '@tauri-apps/api/core'
 
 export function HomeScreen() {
-  return (
-    <div className="p-6 flex gap-6 self-start">
-      {/* <Button
-        onPress={() => {
-          invoke('play')
-        }}>
-        Play
-      </Button>
+  const player = usePlayer()
 
-      <Button
-        onPress={() => {
-          invoke('pause')
-        }}>
-        Pause
-      </Button> */}
+  return (
+    <div className="p-16 flex gap-6 self-start">
+      <div className="text-xl">ELAPSED: {player.elapsed}</div>
+
+      <Button onPress={() => player.play()}>Play</Button>
+      <Button onPress={() => player.pause()}>Pause</Button>
     </div>
   )
 }

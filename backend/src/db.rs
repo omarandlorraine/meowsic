@@ -1,7 +1,10 @@
 use crate::tracks;
+use crate::tracks::Track;
 use anyhow::Result;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::types::Json;
 use sqlx::{Pool, QueryBuilder, Sqlite};
+use std::collections::HashMap;
 use std::path::Path;
 
 pub struct Db {
@@ -20,6 +23,16 @@ impl Db {
             .await?;
 
         Ok(Self { pool })
+    }
+
+    pub async fn get_tracks(&self) -> Result<Vec<Track>> {
+        let entries: Vec<TrackRow> = sqlx::query_as("SELECT * FROM tracks")
+            .fetch_all(&self.pool)
+            .await?;
+
+        let tracks = entries.into_iter().map(Track::from).collect();
+
+        Ok(tracks)
     }
 
     pub async fn scan(&self, dirs: &[impl AsRef<Path>]) -> Result<()> {
@@ -95,4 +108,15 @@ impl Db {
 
         Ok(())
     }
+}
+
+#[derive(sqlx::FromRow)]
+pub struct TrackRow {
+    pub hash: String,
+    pub path: String,
+    pub name: String,
+    pub extension: String,
+    pub duration: f64,
+    pub cover: Option<String>,
+    pub tags: Json<HashMap<String, String>>,
 }

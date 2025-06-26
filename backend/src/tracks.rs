@@ -1,3 +1,4 @@
+use crate::db::TrackRow;
 use crate::utils;
 use anyhow::{Context, Result};
 use serde::Serialize;
@@ -127,6 +128,20 @@ pub fn scan(dirs: &[impl AsRef<Path>]) -> Result<Vec<Track>> {
     }
 
     Ok(tracks)
+}
+
+impl From<TrackRow> for Track {
+    fn from(row: TrackRow) -> Self {
+        Self {
+            hash: row.hash,
+            path: PathBuf::from(row.path),
+            name: row.name,
+            extension: row.extension,
+            duration: row.duration,
+            cover: row.cover.map(PathBuf::from),
+            tags: row.tags.0,
+        }
+    }
 }
 
 // pub fn scan(dirs: &[impl AsRef<Path>], mut tracks: Vec<Track>) -> Result<Vec<Track>> {
