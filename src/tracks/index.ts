@@ -1,3 +1,5 @@
+import { invoke } from '@tauri-apps/api/core'
+
 export type Track = {
   hash: string
   path: string
@@ -6,4 +8,8 @@ export type Track = {
   duration: number
   cover: string | null
   tags: Record<string, string>
+}
+
+export async function getTracks() {
+  return await invoke<Track[]>('db_get_tracks')
 }

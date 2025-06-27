@@ -1,7 +1,7 @@
 import { Button } from '@heroui/react'
 import { Link, Outlet, useLocation } from 'react-router'
 import {
-  DiscIcon,
+  Disc3Icon,
   ListMusicIcon,
   ListVideoIcon,
   MinusIcon,
@@ -18,7 +18,7 @@ const LINKS = [
   { url: '/playlists', title: 'Playlists', Icon: ListMusicIcon },
   { url: '/tracks', title: 'Tracks', Icon: MusicIcon },
   { url: '/artists', title: 'Artists', Icon: UserRoundIcon },
-  { url: '/albums', title: 'Albums', Icon: DiscIcon },
+  { url: '/albums', title: 'Albums', Icon: Disc3Icon },
 ]
 
 export function Window() {

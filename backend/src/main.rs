@@ -39,9 +39,15 @@ async fn main() -> Result<()> {
         .invoke_handler(tauri::generate_handler![
             commands::player_set_queue,
             commands::player_goto,
+            commands::player_next,
+            commands::player_prev,
+            commands::player_seek,
+            commands::player_stop,
             commands::player_play,
             commands::player_pause,
-            commands::get_tracks
+            commands::player_is_paused,
+            commands::player_set_volume,
+            commands::db_get_tracks
         ])
         .run(tauri::generate_context!())?;
 

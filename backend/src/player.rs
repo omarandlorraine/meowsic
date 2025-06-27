@@ -14,6 +14,8 @@ pub struct Player {
 
 impl Player {
     pub fn new(sink: Sink) -> Result<Self> {
+        sink.pause();
+
         Ok(Self {
             sink,
             current: 0,
@@ -22,7 +24,7 @@ impl Player {
         })
     }
 
-    pub fn start(&self) -> Result<()> {
+    fn load(&self) -> Result<()> {
         let file = File::open(&self.queue[self.current])?;
         let reader = BufReader::new(file);
         let source = Decoder::new(reader)?;
@@ -44,7 +46,7 @@ impl Player {
         }
 
         self.stop();
-        self.start()?;
+        self.load()?;
 
         Ok(())
     }
@@ -61,7 +63,7 @@ impl Player {
         }
 
         self.stop();
-        self.start()?;
+        self.load()?;
 
         Ok(())
     }
@@ -73,14 +75,14 @@ impl Player {
 
         self.current = index;
         self.stop();
-        self.start()?;
+        self.load()?;
 
         Ok(())
     }
 
-    pub fn seek(&self, seconds: u64) -> Result<()> {
+    pub fn seek(&self, elapsed: u64) -> Result<()> {
         self.sink
-            .try_seek(Duration::from_secs(seconds))
+            .try_seek(Duration::from_secs(elapsed))
             .map_err(|err| anyhow!("{err}"))
     }
 
@@ -99,6 +101,10 @@ impl Player {
     pub fn set_queue(&mut self, queue: Vec<PathBuf>) {
         self.queue = queue;
         self.current = 0;
+    }
+
+    pub fn is_paused(&self) -> bool {
+        self.sink.is_paused()
     }
 
     pub fn set_volume(&self, volume: f32) {

@@ -1,15 +1,9 @@
-import { usePlayer } from '@/player'
-import { Button } from '@heroui/react'
+import { Player } from '@/player/components'
 
 export function HomeScreen() {
-  const player = usePlayer()
-
   return (
-    <div className="p-16 flex gap-6 self-start">
-      <div className="text-xl">ELAPSED: {player.elapsed}</div>
-
-      <Button onPress={() => player.play()}>Play</Button>
-      <Button onPress={() => player.pause()}>Pause</Button>
+    <div className="p-3 pt-[calc(theme(spacing.10)+theme(spacing.3))] w-full">
+      <Player />
     </div>
   )
 }

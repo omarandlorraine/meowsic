@@ -13,10 +13,6 @@
     @apply size-[1em];
   }
 
-  .lucide {
-    @apply stroke-2;
-  }
-
   body {
     @apply bg-gradient-to-br from-secondary-50 via-background to-secondary-50;
   }

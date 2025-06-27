@@ -1,74 +1,97 @@
+import { invoke } from '@tauri-apps/api/core'
 import { createStore, useStore } from 'zustand'
 import type { Track } from '@/tracks'
-import { invoke } from '@tauri-apps/api/core'
+
+type Timeout = ReturnType<typeof setInterval>
 
 type Store = {
   queue: Track[]
   current: number
   elapsed: number
-  interval: ReturnType<typeof setInterval> | null
+  volume: number
+  interval: Timeout | null
   isPaused: boolean
+  looping: boolean
 }
 
 export const store = createStore<Store>(() => ({
   queue: [],
   current: 0,
   elapsed: 0,
+  volume: 1,
   interval: null,
   isPaused: true,
+  looping: false,
 }))
 
 async function setQueue(queue: Track[]) {
   await invoke('player_set_queue', { queue: queue.map(t => t.path) })
+
   const state = store.getState()
-  if (state.interval) clearInterval(state.interval)
+  invalidateInterval(state.interval)
+
   store.setState({ queue, current: 0, elapsed: 0, interval: null, isPaused: true })
 }
 
-function createInterval() {
-  return setInterval(() => {
-    const state = store.getState()
-    const current = state.queue[state.current] // can be undefined
-
-    if (Math.ceil(current.duration) === state.elapsed) {
-      if (state.interval) clearInterval(state.interval)
-      return next()
-    }
-
-    // ! TODO: EDGE CASE
-    // if (!state.current) {
-    //   if (state.interval) clearInterval(state.interval)
-    //   return { elapsed: 0, interval: null }
-    // }
-
-    store.setState(state => ({ elapsed: state.elapsed + 1 }))
-  }, 1000)
-}
+// ! TODO: handle paused cases, handle looping
 
 export async function goto(index: number) {
+  const state = store.getState()
+  if (!state.isPaused) invalidateInterval(state.interval)
+
   await invoke('player_goto', { index })
-  const interval = createInterval()
-  store.setState({ current: index, elapsed: 0, interval, isPaused: false })
+
+  const interval = state.isPaused ? null : createInterval()
+  store.setState({ current: index, elapsed: 0, interval })
 }
 
 export async function next() {
-  await invoke('player_next')
-  const interval = createInterval()
+  const state = store.getState()
+  if (!state.isPaused) invalidateInterval(state.interval)
 
-  store.setState(state => ({
-    current: state.current + 1,
-    elapsed: 0,
-    interval,
-    isPaused: false,
-  }))
+  await invoke('player_next')
+
+  const interval = state.isPaused ? null : createInterval()
+  store.setState(state => ({ current: state.current + 1, elapsed: 0, interval }))
+}
+
+export async function prev() {
+  const state = store.getState()
+  if (!state.isPaused) invalidateInterval(state.interval)
+
+  await invoke('player_prev')
+
+  const interval = state.isPaused ? null : createInterval()
+  store.setState(state => ({ current: state.current - 1, elapsed: 0, interval }))
+}
+
+export async function seek(elapsed: number) {
+  const state = store.getState()
+  if (!state.isPaused) invalidateInterval(state.interval)
+
+  let rounded = Math.floor(elapsed)
+  await invoke('player_seek', { elapsed: rounded })
+
+  const interval = state.isPaused ? null : createInterval()
+  store.setState({ elapsed: rounded, interval })
+}
+
+export async function stop() {
+  await invoke('player_stop')
+
+  const state = store.getState()
+  invalidateInterval(state.interval)
+
+  store.setState({ elapsed: 0, interval: null, isPaused: true })
 }
 
 export async function pause() {
   const state = store.getState()
   if (state.isPaused) return
-  if (state.interval) clearInterval(state.interval)
 
+  invalidateInterval(state.interval)
   await invoke('player_pause')
+
   store.setState({ interval: null, isPaused: true })
 }
 
@@ -78,11 +101,81 @@ export async function play() {
 
   await invoke('player_play')
   const interval = createInterval()
+
   store.setState({ interval, isPaused: false })
 }
 
-export function usePlayer() {
-  const { current, queue, elapsed } = useStore(store)
+export async function setVolume(volume: number) {
+  await invoke('player_set_volume', { volume })
 
-  return { current: queue[current], queue, elapsed, setQueue, goto, play, pause }
+  store.setState({ volume })
+}
+
+function createInterval() {
+  return setInterval(() => {
+    const state = store.getState()
+    const current = state.queue.at(state.current)
+
+    if (!current) return stop()
+    if (state.elapsed > current.duration) return next()
+
+    store.setState(state => ({ elapsed: state.elapsed + 1 }))
+  }, 1000)
+}
+
+function invalidateInterval(interval?: Timeout | null) {
+  if (interval) clearInterval(interval)
+}
+
+export function usePlayer() {
+  const { current, queue, elapsed, isPaused, looping } = useStore(store)
+
+  const toggle = isPaused ? play : pause
+
+  const hasNext = queue.length > current + 1
+  const hasPrev = current > 0
+
+  return {
+    current: queue.at(current),
+    queue,
+    elapsed,
+    isPaused,
+    setQueue,
+    stop,
+    prev,
+    next,
+    goto,
+    play,
+    pause,
+    seek,
+    setVolume,
+    toggle,
+    hasNext,
+    hasPrev,
+    looping,
+  }
+}
+
+export function normalizeMeta(track?: Track | null) {
+  if (!track) return null
+
+  let title = track.name
+  let artist = ''
+  let album = ''
+
+  for (const [key, value] of Object.entries(track.tags)) {
+    switch (key) {
+      case 'TrackTitle':
+        title = value
+        break
+      case 'Artist':
+        artist = value
+        break
+      case 'Album':
+        album = value
+        break
+    }
+  }
+
+  return { title, artist, album }
 }
