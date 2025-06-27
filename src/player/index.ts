@@ -155,27 +155,3 @@ export function usePlayer() {
     looping,
   }
 }
-
-export function normalizeMeta(track?: Track | null) {
-  if (!track) return null
-
-  let title = track.name
-  let artist = ''
-  let album = ''
-
-  for (const [key, value] of Object.entries(track.tags)) {
-    switch (key) {
-      case 'TrackTitle':
-        title = value
-        break
-      case 'Artist':
-        artist = value
-        break
-      case 'Album':
-        album = value
-        break
-    }
-  }
-
-  return { title, artist, album }
-}

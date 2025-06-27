@@ -1,4 +1,4 @@
-import { Button } from '@heroui/react'
+import { Button, cn } from '@heroui/react'
 import { Link, Outlet, useLocation } from 'react-router'
 import {
   Disc3Icon,
@@ -12,18 +12,10 @@ import {
   XIcon,
 } from 'lucide-react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-
-const LINKS = [
-  { url: '/queue', title: 'Queue', Icon: ListVideoIcon },
-  { url: '/playlists', title: 'Playlists', Icon: ListMusicIcon },
-  { url: '/tracks', title: 'Tracks', Icon: MusicIcon },
-  { url: '/artists', title: 'Artists', Icon: UserRoundIcon },
-  { url: '/albums', title: 'Albums', Icon: Disc3Icon },
-]
+import type { LucideIcon } from 'lucide-react'
 
 export function Window() {
   const currentWindow = getCurrentWindow()
-  const location = useLocation()
 
   return (
     <>
@@ -52,32 +44,38 @@ export function Window() {
 
       <div className="flex h-full">
         <div className="flex flex-col gap-2 p-3 pt-[calc(theme(spacing.10)+theme(spacing.3))] h-full">
-          {LINKS.map(({ url, title, Icon }) => (
-            <Button
-              key={url}
-              as={Link}
-              to={url}
-              variant={location.pathname === url ? 'flat' : 'light'}
-              fullWidth
-              radius="sm"
-              className="justify-start">
-              <Icon className="text-lg" /> {title}
-            </Button>
-          ))}
+          <NavLink url="/queue" title="Queue" icon={ListVideoIcon} />
+          <NavLink url="/playlists" title="Playlists" icon={ListMusicIcon} />
 
-          <Button
-            as={Link}
-            to="/settings"
-            variant={location.pathname === '/settings' ? 'flat' : 'light'}
-            fullWidth
-            radius="sm"
-            className="justify-start mt-auto">
-            <SettingsIcon className="text-lg" /> Settings
-          </Button>
+          <hr className="border-default/30 mx-2" />
+
+          <NavLink url="/tracks" title="Tracks" icon={MusicIcon} />
+          <NavLink url="/artists" title="Artists" icon={UserRoundIcon} />
+          <NavLink url="/albums" title="Albums" icon={Disc3Icon} />
+
+          <NavLink url="/settings" title="Settings" icon={SettingsIcon} className="mt-auto" />
         </div>
 
         <Outlet />
       </div>
     </>
+  )
+}
+
+type NavLinkProps = { url: string; title: string; icon: LucideIcon | (() => React.ReactNode); className?: string }
+
+function NavLink({ url, title, icon: Icon, className }: NavLinkProps) {
+  const location = useLocation()
+
+  return (
+    <Button
+      as={Link}
+      to={url}
+      variant={location.pathname === url ? 'flat' : 'light'}
+      fullWidth
+      radius="sm"
+      className={cn('justify-start', className)}>
+      <Icon className="text-lg" /> {title}
+    </Button>
   )
 }

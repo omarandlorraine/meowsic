@@ -1,7 +1,7 @@
-import { Button, Image, Slider } from '@heroui/react'
+import { useEffect, useState } from 'react'
+import { Button, Slider } from '@heroui/react'
 import {
   Disc3Icon,
-  MusicIcon,
   PauseIcon,
   PlayIcon,
   RepeatIcon,
@@ -10,9 +10,10 @@ import {
   SkipForwardIcon,
   UserRoundIcon,
 } from 'lucide-react'
-import { getAssetUrl, formatTime } from '@/utils'
-import { normalizeMeta, usePlayer } from '@/player'
-import { useEffect, useState } from 'react'
+import { formatTime } from '@/utils'
+import { usePlayer } from '@/player'
+import { normalizeMeta } from '@/tracks'
+import { Cover } from '@/tracks/components'
 
 export function Player() {
   const player = usePlayer()
@@ -26,33 +27,18 @@ export function Player() {
 
   return (
     <div className="flex flex-col items-center justify-center h-full">
-      <div className="size-80 rounded-small overflow-hidden mb-18">
-        {player.current?.cover ? (
-          <Image
-            isBlurred
-            radius="sm"
-            width="100%"
-            height="100%"
-            src={getAssetUrl(player.current.cover)}
-            classNames={{ wrapper: 'size-full', img: 'size-full object-contain' }}
-          />
-        ) : (
-          <div className="size-full grid place-items-center bg-radial from-secondary-50/75 to-default-50/25">
-            <MusicIcon className="size-1/3 text-secondary-900 opacity-50" />
-          </div>
-        )}
-      </div>
+      <Cover url={player.current?.cover} className="size-80 mb-18" />
 
       <div className="flex items-center gap-2 w-4/5 p-3">
-        <div className="text-large mr-auto">{meta?.title || 'Unknown Track'}</div>
+        <div className="text-large mr-auto">{meta.title || 'Unknown Track'}</div>
 
-        {meta?.album && (
+        {meta.album && (
           <div className="text-default-500 flex items-center gap-2 text-small">
             <Disc3Icon /> {meta.album}
           </div>
         )}
 
-        {meta?.artist && (
+        {meta.artist && (
           <div className="text-default-500 flex items-center gap-2 text-small">
             <UserRoundIcon /> {meta.artist}
           </div>
@@ -77,7 +63,7 @@ export function Player() {
 
         <div className="flex justify-between">
           <div className="text-small">{formatTime(player.elapsed)}</div>
-          <div className="text-small text-foreground/50">{formatTime(player.current?.duration)}</div>
+          <div className="text-small text-default-500">{meta.duration}</div>
         </div>
       </div>
 
