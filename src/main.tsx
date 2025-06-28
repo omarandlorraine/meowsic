@@ -7,7 +7,8 @@ import { createBrowserRouter, RouterProvider } from 'react-router'
 import { Window } from '@/components/window'
 import { HomeScreen } from '@/components/home'
 import { TracksScreen } from '@/tracks/components'
-import { QueueScreen } from '@/components/queue'
+import { QueueScreen } from '@/queue'
+import { SettingsScreen } from '@/settings'
 
 const router = createBrowserRouter([
   {
@@ -20,7 +21,7 @@ const router = createBrowserRouter([
       { path: '/tracks', Component: TracksScreen },
       { path: '/artists', Component: HomeScreen },
       { path: '/albums', Component: HomeScreen },
-      { path: '/settings', Component: HomeScreen },
+      { path: '/settings', Component: SettingsScreen },
     ],
   },
 ])

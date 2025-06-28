@@ -35,7 +35,7 @@ impl Db {
         Ok(tracks)
     }
 
-    pub async fn scan(&self, dirs: &[impl AsRef<Path>]) -> Result<()> {
+    pub async fn scan_dirs(&self, dirs: &[impl AsRef<Path>]) -> Result<()> {
         let tracks = tracks::scan(&dirs)?;
 
         let mut qb = QueryBuilder::new(

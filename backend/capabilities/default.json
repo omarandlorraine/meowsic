@@ -2,7 +2,9 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "capability for the all windows",
-  "windows": ["*"],
+  "windows": [
+    "*"
+  ],
   "permissions": [
     "core:default",
     "opener:default",
@@ -21,7 +23,12 @@
     "store:default",
     {
       "identifier": "http:default",
-      "allow": [{ "url": "*" }]
-    }
+      "allow": [
+        {
+          "url": "*"
+        }
+      ]
+    },
+    "dialog:default"
   ]
 }

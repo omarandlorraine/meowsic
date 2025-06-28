@@ -57,3 +57,18 @@ pub fn player_set_volume(state: State<AppState, '_>, volume: f32) -> Result<(), 
 pub async fn db_get_tracks(state: State<AppState, '_>) -> Result<Vec<Track>, Error> {
     Ok(state.db.get_tracks().await?)
 }
+
+#[tauri::command]
+pub async fn db_scan_dirs(state: State<AppState, '_>) -> Result<(), Error> {
+    Ok(state.db.scan_dirs(&state.db.get_dirs().await?).await?)
+}
+
+#[tauri::command]
+pub async fn db_set_dirs(state: State<AppState, '_>, dirs: Vec<String>) -> Result<(), Error> {
+    Ok(state.db.set_dirs(&dirs).await?)
+}
+
+#[tauri::command]
+pub async fn db_get_dirs(state: State<AppState, '_>) -> Result<Vec<String>, Error> {
+    Ok(state.db.get_dirs().await?)
+}

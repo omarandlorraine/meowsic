@@ -24,7 +24,7 @@ async fn main() -> Result<()> {
     let player = Arc::new(Mutex::new(Player::new(sink)?));
     let db = Db::new("meowsic.db").await?;
 
-    // db.init().await?;
+    db.init().await?;
     // db.set_dirs(&["D:/music"]).await?;
     // let dirs = db.get_dirs().await?;
     // db.scan(&dirs).await?;
@@ -32,6 +32,7 @@ async fn main() -> Result<()> {
     let state = AppState { player, db };
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
@@ -47,7 +48,10 @@ async fn main() -> Result<()> {
             commands::player_pause,
             commands::player_is_paused,
             commands::player_set_volume,
-            commands::db_get_tracks
+            commands::db_get_tracks,
+            commands::db_scan_dirs,
+            commands::db_get_dirs,
+            commands::db_set_dirs,
         ])
         .run(tauri::generate_context!())?;
 

@@ -6,9 +6,14 @@
 
 @theme {
   --font-sans: 'Poppins';
+  --breakpoint-3xl: 1920px;
 }
 
 @layer base {
+  :root {
+    @apply text-[14px] 3xl:text-[16px];
+  }
+
   svg {
     @apply size-[1em];
   }
