@@ -7,8 +7,13 @@ export type Track = {
   name: string
   extension: string
   duration: number
-  cover: string | null
-  tags: Record<string, string>
+  cover?: string | null
+  title?: string | null
+  artist?: string | null
+  album?: string | null
+  albumArtist?: string | null
+  date?: string | null
+  genre?: string | null
 }
 
 export async function getTracks() {
@@ -16,27 +21,13 @@ export async function getTracks() {
 }
 
 export function normalizeMeta(track?: Track | null) {
-  let duration = formatTime(track?.duration)
-  if (!track) return { duration }
-
-  let title = track.name
-  let artist = ''
-  let album = ''
-  let albumArtist = ''
-  let date = ''
-  let genre = ''
-
-  for (const [key, value] of Object.entries(track.tags)) {
-    // prettier-ignore
-    switch (key) {
-      case 'TrackTitle':    title = value;        break
-      case 'Artist':        artist = value;       break
-      case 'Album':         album = value;        break
-      case 'AlbumArtist':   albumArtist = value;  break        
-      case 'Date':          date = value;         break
-      case 'Genre':         genre = value;        break
-    }
+  return {
+    duration: formatTime(track?.duration),
+    title: track?.title ?? track?.name,
+    artist: track?.artist,
+    album: track?.album,
+    albumArtist: track?.albumArtist,
+    date: track?.date,
+    genre: track?.genre,
   }
-
-  return { title, artist, album, albumArtist, date, genre, duration }
 }

@@ -8,20 +8,26 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use symphonia::core::formats::FormatOptions;
 use symphonia::core::io::MediaSourceStream;
-use symphonia::core::meta::{MetadataOptions, StandardVisualKey};
+use symphonia::core::meta::{MetadataOptions, StandardTagKey, StandardVisualKey};
 use symphonia::core::probe::Hint;
 use symphonia::default::get_probe;
 use walkdir::WalkDir;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Default, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Track {
     pub hash: String,
     pub path: PathBuf,
     pub name: String,
     pub extension: String,
-    pub duration: f64,
+    pub duration: u64,
     pub cover: Option<PathBuf>,
-    pub tags: HashMap<String, String>,
+    pub title: Option<String>,
+    pub artist: Option<String>,
+    pub album: Option<String>,
+    pub album_artist: Option<String>,
+    pub date: Option<String>,
+    pub genre: Option<String>,
 }
 
 impl Track {
@@ -62,10 +68,8 @@ impl Track {
             path,
             name,
             extension,
-            duration: 0.0,
-            cover: None,
-            tags: HashMap::new(),
             hash: hash.to_string(),
+            ..Self::default()
         };
 
         if let Some(track) = probed.format.default_track() {
@@ -74,7 +78,7 @@ impl Track {
                 .n_frames
                 .zip(track.codec_params.sample_rate)
             {
-                data.duration = num_frames as f64 / sample_rate as f64;
+                data.duration = num_frames / sample_rate as u64;
             }
         }
 
@@ -86,7 +90,17 @@ impl Track {
             if let Some(rev) = meta.skip_to_latest() {
                 for tag in rev.tags() {
                     if let Some(key) = tag.std_key {
-                        data.tags.insert(format!("{key:?}"), tag.value.to_string());
+                        use StandardTagKey::*;
+
+                        match key {
+                            TrackTitle => data.title = Some(tag.value.to_string()),
+                            Artist => data.artist = Some(tag.value.to_string()),
+                            Album => data.album = Some(tag.value.to_string()),
+                            AlbumArtist => data.album_artist = Some(tag.value.to_string()),
+                            Date => data.date = Some(tag.value.to_string()),
+                            Genre => data.genre = Some(tag.value.to_string()),
+                            _ => {}
+                        }
                     }
                 }
 
@@ -137,9 +151,14 @@ impl From<TrackRow> for Track {
             path: PathBuf::from(row.path),
             name: row.name,
             extension: row.extension,
-            duration: row.duration,
+            duration: row.duration.try_into().unwrap_or_default(),
             cover: row.cover.map(PathBuf::from),
-            tags: row.tags.0,
+            title: row.title,
+            artist: row.artist,
+            album: row.album,
+            album_artist: row.album_artist,
+            date: row.date,
+            genre: row.genre,
         }
     }
 }

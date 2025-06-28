@@ -6,6 +6,7 @@
 
 @theme {
   --font-sans: 'Poppins';
+  --font-mono: 'JetBrains Mono';
   --breakpoint-3xl: 1920px;
 }
 

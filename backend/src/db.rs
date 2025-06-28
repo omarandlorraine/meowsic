@@ -39,7 +39,8 @@ impl Db {
         let tracks = tracks::scan(&dirs)?;
 
         let mut qb = QueryBuilder::new(
-            "INSERT INTO tracks (hash, path, name, extension, duration, cover, tags) ",
+            "INSERT INTO tracks 
+            (hash, path, name, extension, duration, cover, title, artist, album, album_artist, date, genre) ",
         );
 
         qb.push_values(tracks.into_iter().take(32000), |mut b, track| {
@@ -47,12 +48,18 @@ impl Db {
                 .push_bind(track.path.to_string_lossy().to_string())
                 .push_bind(track.name)
                 .push_bind(track.extension)
-                .push_bind(track.duration)
+                .push_bind(track.duration as i64)
                 .push_bind(track.cover.map(|p| p.to_string_lossy().to_string()))
-                .push_bind(serde_json::to_string(&track.tags).unwrap_or_default());
+                .push_bind(track.title)
+                .push_bind(track.artist)
+                .push_bind(track.album)
+                .push_bind(track.album_artist)
+                .push_bind(track.date)
+                .push_bind(track.genre);
         });
 
         let mut tx = self.pool.begin().await?;
+        sqlx::query("DELETE FROM tracks").execute(&mut *tx).await?;
         qb.build().execute(&mut *tx).await?;
         tx.commit().await?;
 
@@ -89,17 +96,22 @@ impl Db {
         sqlx::query(
             "
             CREATE TABLE IF NOT EXISTS dirs (                
-                path    TEXT PRIMARY KEY
+                path    TEXT    PRIMARY KEY
             );
 
             CREATE TABLE IF NOT EXISTS tracks (                
-                hash        TEXT PRIMARY KEY,
-                path        TEXT NOT NULL,
-                name        TEXT NOT NULL,
-                extension   TEXT NOT NULL,
-                duration    REAL NOT NULL,
-                cover       TEXT,
-                tags        BLOB
+                hash            TEXT        PRIMARY KEY,
+                path            TEXT        NOT NULL,
+                name            TEXT        NOT NULL,
+                extension       TEXT        NOT NULL,
+                duration        INTEGER     NOT NULL,
+                cover           TEXT,
+                title           TEXT,
+                artist          TEXT,
+                album           TEXT,
+                album_artist    TEXT,
+                date            TEXT,
+                genre           TEXT
             );
             ",
         )
@@ -116,7 +128,12 @@ pub struct TrackRow {
     pub path: String,
     pub name: String,
     pub extension: String,
-    pub duration: f64,
+    pub duration: i64,
     pub cover: Option<String>,
-    pub tags: Json<HashMap<String, String>>,
+    pub title: Option<String>,
+    pub artist: Option<String>,
+    pub album: Option<String>,
+    pub album_artist: Option<String>,
+    pub date: Option<String>,
+    pub genre: Option<String>,
 }

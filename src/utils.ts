@@ -6,7 +6,7 @@ export function getAssetUrl(path: string) {
 export function formatTime(value?: number | null): string {
   if (value == null || isNaN(value) || value <= 0) return '0:00'
 
-  const rounded = Math.floor(value)
+  const rounded = value // Math.floor(value) // already whole seconds
   const mins = Math.floor(rounded / 60)
   const secs = rounded % 60
 

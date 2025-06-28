@@ -19,8 +19,8 @@ export function SettingsScreen() {
       {queryDirs.isSuccess && queryDirs.data.length > 0 && (
         <div className="flex flex-col gap-3 p-3 bg-default-50/25 rounded-small">
           {queryDirs.data.map(dir => (
-            <div key={dir} className="text-default-500 text-small flex items-center w-100 pl-2">
-              {dir}
+            <div key={dir} className="flex items-center w-100 pl-2">
+              <div className="text-default-500 font-mono">{dir}</div>
 
               <Button
                 isIconOnly
