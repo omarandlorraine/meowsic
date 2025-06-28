@@ -2,7 +2,6 @@ use crate::db::TrackRow;
 use crate::utils;
 use anyhow::{Context, Result};
 use serde::Serialize;
-use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fs;
 use std::path::{Path, PathBuf};

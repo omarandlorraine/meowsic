@@ -2,9 +2,7 @@ use crate::tracks;
 use crate::tracks::Track;
 use anyhow::Result;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use sqlx::types::Json;
 use sqlx::{Pool, QueryBuilder, Sqlite};
-use std::collections::HashMap;
 use std::path::Path;
 
 pub struct Db {
@@ -31,6 +29,11 @@ impl Db {
             .await?;
 
         let tracks = entries.into_iter().map(Track::from).collect();
+
+        // let mut tracks: Vec<Track> = tracks; // TEST large dataset -> 376832 tracks
+        // for _ in 0..12 {
+        //     tracks.extend(tracks.clone().into_iter());
+        // }
 
         Ok(tracks)
     }
