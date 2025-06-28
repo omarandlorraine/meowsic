@@ -5,7 +5,7 @@ export function QueueScreen() {
   const player = usePlayer()
 
   return (
-    <div className="px-3 pb-3 pt-[calc(theme(spacing.10)+theme(spacing.3))] overflow-auto w-full">
+    <div className="p-3 pt-[calc(theme(spacing.10)+theme(spacing.3))] overflow-auto w-full">
       <div className="flex flex-col gap-1 divide-y divide-default/30">
         {player.queue.map((track, index) => (
           <TrackListItem

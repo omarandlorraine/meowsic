@@ -21,8 +21,7 @@ export function Window() {
     <>
       <div
         data-tauri-drag-region
-        className="flex items-center fixed inset-x-0 top-0
-        z-100 bg-default-50/25 backdrop-blur-lg pointer-events-auto">
+        className="flex items-center fixed inset-x-0 top-0 z-100 bg-default-50/25 backdrop-blur-lg pointer-events-auto">
         <Button as={Link} to="/" variant="light" radius="none" className="text-lg px-6">
           <PlayIcon className="text-lg text-secondary-600" /> Meowsic
         </Button>
@@ -43,7 +42,7 @@ export function Window() {
       </div>
 
       <div className="flex h-full">
-        <div className="flex flex-col gap-2 p-3 pt-[calc(theme(spacing.10)+theme(spacing.3))] h-full">
+        <div className="flex flex-col gap-2 p-3 pt-[calc(theme(spacing.10)+theme(spacing.3))] h-full w-44">
           <NavLink url="/queue" title="Queue" icon={ListVideoIcon} />
           <NavLink url="/playlists" title="Playlists" icon={ListMusicIcon} />
 
