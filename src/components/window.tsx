@@ -21,7 +21,8 @@ export function Window() {
     <>
       <div
         data-tauri-drag-region
-        className="flex items-center fixed inset-x-0 top-0 z-100 bg-default-50/25 backdrop-blur-lg pointer-events-auto">
+        className="flex items-center pointer-events-auto 
+        fixed inset-x-0 top-0 z-100 bg-default-50/25 backdrop-blur-lg backdrop-saturate-125">
         <Button as={Link} to="/" variant="light" radius="none" className="text-lg px-6">
           <PlayIcon className="text-lg text-secondary-600" /> Meowsic
         </Button>

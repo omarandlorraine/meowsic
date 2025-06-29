@@ -148,7 +148,17 @@ impl Db {
         name: impl AsRef<str>,
         hashes: &[impl AsRef<str>],
     ) -> Result<()> {
-        let mut qb = QueryBuilder::new("INSERT INTO playlist_tracks (playlist_name, track_hash) ");
+        if hashes.is_empty() {
+            sqlx::query("DELETE FROM playlist_tracks WHERE playlist_name = $1")
+                .bind(name.as_ref())
+                .execute(&self.pool)
+                .await?;
+
+            return Ok(());
+        }
+
+        let mut qb =
+            QueryBuilder::new("INSERT OR IGNORE INTO playlist_tracks (playlist_name, track_hash) ");
 
         qb.push_values(hashes.into_iter().take(32000), |mut b, hash| {
             b.push_bind(name.as_ref()).push_bind(hash.as_ref());
@@ -224,7 +234,8 @@ impl Db {
                 track_hash      TEXT    NOT NULL,
 
                 PRIMARY KEY (playlist_name, track_hash),
-                FOREIGN KEY (playlist_name) REFERENCES playlists(name) ON DELETE CASCADE
+                FOREIGN KEY (playlist_name) REFERENCES playlists(name)
+                    ON DELETE CASCADE ON UPDATE CASCADE
             );
             ",
         )

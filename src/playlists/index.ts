@@ -24,3 +24,13 @@ export async function getPlaylistTracks(name: string) {
 export async function setPlaylistTracks(name: string, tracks: Track[]) {
   return await invoke('db_set_playlist_tracks', { name, hashes: tracks.map(t => t.hash) })
 }
+
+export async function addToExistingPlaylist(name: string, tracks: Track[]) {
+  const existing = await getPlaylistTracks(name)
+  await setPlaylistTracks(name, existing.concat(tracks))
+}
+
+export async function addToNewPlaylist(name: string, tracks: Track[]) {
+  await addPlaylist(name)
+  await setPlaylistTracks(name, tracks)
+}

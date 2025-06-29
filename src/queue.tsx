@@ -36,24 +36,27 @@ export function QueueScreen() {
   const onRemove = async () => {
     if (!player.current) return
 
-    if (!selection.values.length) {
+    const reset = async () => {
       await player.setQueue([])
       await player.setCurrent(0)
       await player.stop()
-
-      return
     }
+
+    if (!selection.values.length) return reset()
 
     const filtered = player.queue.filter(track => !selection.isSelected(track))
     const newIndex = filtered.findIndex(track => track === player.current) // compare by reference
 
-    await player.setQueue(filtered)
-
-    if (newIndex !== -1) await player.setCurrent(newIndex)
+    if (!filtered.length) reset()
     else {
-      // current track was removed
-      await player.goto(0)
-      await player.pause()
+      await player.setQueue(filtered)
+
+      if (newIndex !== -1) await player.setCurrent(newIndex)
+      else {
+        // current track was removed
+        await player.goto(0)
+        await player.pause()
+      }
     }
 
     virtualizer.measure()
@@ -65,7 +68,13 @@ export function QueueScreen() {
       <TrackListControlsContainer>
         {selection.values.length > 0 && <SelectAllControls data={player.queue} selection={selection} />}
 
-        <Button radius="sm" variant="flat" color="secondary" onPress={onRemove}>
+        <Button
+          radius="sm"
+          variant="flat"
+          color="danger"
+          className="!text-foreground"
+          onPress={onRemove}
+          isDisabled={!player.queue.length}>
           <Trash2Icon className="text-lg" /> Remove {selection.values.length > 0 ? 'Selected' : 'All'}
         </Button>
       </TrackListControlsContainer>

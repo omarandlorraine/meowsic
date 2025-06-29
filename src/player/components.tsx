@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useLayoutEffect, useState } from 'react'
 import { Button, Slider } from '@heroui/react'
 import {
   Disc3Icon,
@@ -20,7 +20,7 @@ export function Player() {
 
   const [progress, setProgress] = useState<number | number[]>(player.elapsed)
 
-  useEffect(() => setProgress(player.elapsed), [player.elapsed])
+  useLayoutEffect(() => setProgress(player.elapsed), [player.elapsed])
 
   const meta = normalizeMeta(player.current)
 

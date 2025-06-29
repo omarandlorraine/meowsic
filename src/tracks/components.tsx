@@ -29,7 +29,7 @@ import { useStore } from 'zustand'
 import { formatTime, getAssetUrl, uiStore, useSelection } from '@/utils'
 import { usePlayer } from '@/player'
 import { getTracks, normalizeMeta } from '@/tracks'
-import { addPlaylist, getPlaylists, setPlaylistTracks } from '@/playlists'
+import { addToExistingPlaylist, addToNewPlaylist, getPlaylists } from '@/playlists'
 import { SearchBar, SelectAllControls } from '@/components'
 import { PlaylistEditorModal } from '@/playlists/components'
 import type { Track } from '@/tracks'
@@ -102,8 +102,17 @@ export function TracksScreen() {
                   </DropdownSection>
 
                   <DropdownSection className="mb-0">
-                    {playlists.map(playlist => (
-                      <DropdownItem key={playlist}>{playlist}</DropdownItem>
+                    {playlists.map(name => (
+                      <DropdownItem
+                        key={name}
+                        onPress={async () => {
+                          await addToExistingPlaylist(name, selection.values)
+
+                          selection.clear()
+                          navigate(`/playlists/${name}`)
+                        }}>
+                        {name}
+                      </DropdownItem>
                     ))}
                   </DropdownSection>
                 </DropdownMenu>
@@ -115,9 +124,9 @@ export function TracksScreen() {
                 radius="sm"
                 variant="flat"
                 color="secondary"
-                isDisabled={!query.isSuccess}
+                isDisabled={!query.isSuccess || !query.data.length}
                 onPress={() => {
-                  if (query.isSuccess) onPlay(query.data)
+                  if (query.isSuccess && query.data.length > 0) onPlay(query.data)
                 }}>
                 <PlayIcon className="text-lg" /> Play All
               </Button>
@@ -149,13 +158,14 @@ export function TracksScreen() {
       </TrackListContainer>
 
       <PlaylistEditorModal
+        type="new"
         isOpen={playlistEditorModal.isOpen}
         onOpenChange={playlistEditorModal.onOpenChange}
-        onSave={async name => {
-          await addPlaylist(name)
-          await setPlaylistTracks(name, selection.values)
+        onAction={async name => {
+          await addToNewPlaylist(name, selection.values)
 
           playlistEditorModal.onClose()
+          selection.clear()
           navigate(`/playlists/${name}`)
         }}
       />
@@ -190,7 +200,7 @@ export function TrackListContainer({ ref, children, className }: TrackListContai
     <div
       ref={ref}
       className={cn(
-        'pt-[calc(theme(spacing.10)+theme(spacing.1))] overflow-auto w-full flex flex-col relative h-full',
+        'pt-[calc(theme(spacing.10)+theme(spacing.2))] overflow-auto w-full flex flex-col relative h-full',
         className,
       )}>
       {children}
@@ -274,7 +284,8 @@ export function TrackListControlsContainer({ children, className }: TrackListCon
   return (
     <div
       className={cn(
-        'px-6 py-3 flex items-center gap-3 sticky top-0 inset-x-0 bg-default-50/25 backdrop-blur-lg z-50 rounded-small',
+        'px-6 py-3 flex items-center gap-3 rounded-small',
+        'sticky top-0 inset-x-0 bg-default-50/25 backdrop-blur-lg z-50 backdrop-saturate-125',
         className,
       )}>
       {children}
