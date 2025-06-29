@@ -27,10 +27,21 @@ export const store = createStore<Store>(() => ({
 async function setQueue(queue: Track[]) {
   await invoke('player_set_queue', { queue: queue.map(t => t.path) })
 
-  const state = store.getState()
-  invalidateInterval(state.interval)
+  // const state = store.getState()
+  // invalidateInterval(state.interval)
 
-  store.setState({ queue, current: 0, elapsed: 0, interval: null, isPaused: true })
+  store.setState({ queue })
+  // store.setState({ queue, current: 0, elapsed: 0, interval: null, isPaused: true })
+}
+
+async function setCurrent(current: number) {
+  await invoke('player_set_current', { index: current })
+
+  // const state = store.getState()
+  // invalidateInterval(state.interval)
+
+  store.setState({ current })
+  // store.setState({ current, elapsed: 0, interval: null, isPaused: true })
 }
 
 // ! TODO: handle paused cases, handle looping
@@ -69,11 +80,10 @@ export async function seek(elapsed: number) {
   const state = store.getState()
   if (!state.isPaused) invalidateInterval(state.interval)
 
-  let rounded = Math.floor(elapsed)
-  await invoke('player_seek', { elapsed: rounded })
+  await invoke('player_seek', { elapsed })
 
   const interval = state.isPaused ? null : createInterval()
-  store.setState({ elapsed: rounded, interval })
+  store.setState({ elapsed, interval })
 }
 
 export async function stop() {
@@ -136,11 +146,13 @@ export function usePlayer() {
   const hasPrev = current > 0
 
   return {
+    currentIndex: current,
     current: queue.at(current),
+    setQueue,
+    setCurrent,
     queue,
     elapsed,
     isPaused,
-    setQueue,
     stop,
     prev,
     next,

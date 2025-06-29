@@ -25,9 +25,6 @@ async fn main() -> Result<()> {
     let db = Db::new("meowsic.db").await?;
 
     db.init().await?;
-    // db.set_dirs(&["D:/music"]).await?;
-    // let dirs = db.get_dirs().await?;
-    // db.scan(&dirs).await?;
 
     let state = AppState { player, db };
 
@@ -46,6 +43,7 @@ async fn main() -> Result<()> {
             commands::player_stop,
             commands::player_play,
             commands::player_pause,
+            commands::player_set_current,
             commands::player_is_paused,
             commands::player_set_volume,
             commands::db_get_tracks,

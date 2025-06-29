@@ -28,12 +28,12 @@ export function SettingsScreen() {
                 radius="full"
                 color="danger"
                 variant="light"
-                className="ml-auto"
+                className="ml-auto shrink-0"
                 onPress={async () => {
                   await setDirs(queryDirs.data.filter(d => d !== dir))
                   await queryDirs.refetch()
                 }}>
-                <XIcon className="text-medium" />
+                <XIcon className="text-medium !text-foreground" />
               </Button>
             </div>
           ))}

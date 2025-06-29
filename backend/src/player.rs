@@ -69,11 +69,7 @@ impl Player {
     }
 
     pub fn goto(&mut self, index: usize) -> Result<()> {
-        if index >= self.queue.len() {
-            return Err(anyhow!("Index out of bounds"));
-        }
-
-        self.current = index;
+        self.set_current(index)?;
         self.stop();
         self.load()?;
 
@@ -100,7 +96,18 @@ impl Player {
 
     pub fn set_queue(&mut self, queue: Vec<PathBuf>) {
         self.queue = queue;
-        self.current = 0;
+    }
+
+    pub fn set_current(&mut self, index: usize) -> Result<()> {
+        if index > self.queue.len() {
+            // ? 0 is allowed as a valid default index
+            Err(anyhow!("Index out of bounds"))
+        } else if index == self.current {
+            Ok(())
+        } else {
+            self.current = index;
+            Ok(())
+        }
     }
 
     pub fn is_paused(&self) -> bool {

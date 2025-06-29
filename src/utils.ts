@@ -32,9 +32,15 @@ const observer = new ResizeObserver(entries => {
 
 observer.observe(document.body)
 
-type UseSelectionOptions<T> = { isEqual: (a: T, b: T) => boolean }
+export type UseSelection<T> = {
+  values: T[]
+  set: React.Dispatch<React.SetStateAction<T[]>>
+  isSelected: (data: T) => boolean
+  toggle: (data: T, previouslySelected?: boolean) => void
+  clear: () => void
+}
 
-export function useSelection<T>({ isEqual }: UseSelectionOptions<T>) {
+export function useSelection<T>(isEqual: (a: T, b: T) => boolean): UseSelection<T> {
   const [values, set] = useState<T[]>([])
 
   const isSelected = (data: T) => values.some(t => isEqual(t, data))

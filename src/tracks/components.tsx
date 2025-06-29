@@ -1,4 +1,4 @@
-import { memo, useRef } from 'react'
+import { memo, useLayoutEffect, useRef } from 'react'
 import { useNavigate } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useVirtualizer, VirtualItem } from '@tanstack/react-virtual'
@@ -32,6 +32,7 @@ import { formatTime, getAssetUrl, uiStore, useSelection } from '@/utils'
 import { usePlayer } from '@/player'
 import { getTracks, normalizeMeta } from '@/tracks'
 import type { Track } from '@/tracks'
+import type { UseSelection } from '@/utils'
 
 export function TracksScreen() {
   const navigate = useNavigate()
@@ -50,6 +51,10 @@ export function TracksScreen() {
     overscan: 5,
   })
 
+  useLayoutEffect(() => {
+    virtualizer.measure()
+  }, [fontSize])
+
   const onPlay = async (data: Track | Track[]) => {
     await player.setQueue(Array.isArray(data) ? data : [data])
     await player.goto(0)
@@ -57,48 +62,16 @@ export function TracksScreen() {
     navigate('/')
   }
 
-  const selection = useSelection<Track>({ isEqual: (a, b) => a.hash === b.hash })
-
-  // const [selected, setSelected] = useState<Track[]>([])
-  // const isSelected = (track: Track) => selected.some(t => t.hash === track.hash)
-
-  // const onToggleSelect = (track: Track, previouslySelected?: boolean) => {
-  //   if (previouslySelected) setSelected(state => state.filter(t => t !== track))
-  //   else setSelected(state => state.concat(track))
-  // }
+  const selection = useTrackSelection()
 
   const playlists: string[] = []
 
   return (
-    <div
-      ref={containerRef}
-      className="pt-[calc(theme(spacing.10)+theme(spacing.1))] overflow-auto w-full flex flex-col relative h-full">
-      <div className="px-6 py-2 flex items-center gap-3 sticky top-0 inset-x-0 bg-default-50/25 backdrop-blur-lg z-50 rounded-small">
+    <TrackListContainer ref={containerRef}>
+      <TrackListControlsContainer>
         {selection.values.length > 0 ? (
           <>
-            {query.isSuccess && (
-              <div className="flex items-center gap-2 w-44">
-                <Checkbox
-                  color="success"
-                  radius="full"
-                  isSelected={selection.values.length === query.data.length}
-                  onValueChange={() => {
-                    if (selection.values.length === query.data.length) return selection.clear()
-                    selection.set(query.data)
-                  }}
-                />
-
-                <Button
-                  size="sm"
-                  radius="sm"
-                  color="danger"
-                  variant="flat"
-                  className="!text-foreground"
-                  onPress={selection.clear}>
-                  {selection.values.length} items <XIcon className="text-medium" />
-                </Button>
-              </div>
-            )}
+            {query.isSuccess && <SelectAllControls data={query.data} selection={selection} />}
 
             <Button radius="sm" variant="flat" color="secondary" onPress={() => onPlay(selection.values)}>
               <PlayIcon className="text-lg" /> Play
@@ -161,12 +134,10 @@ export function TracksScreen() {
             />
           </>
         )}
-      </div>
+      </TrackListControlsContainer>
 
       {query.isSuccess && (
-        <div
-          style={{ height: virtualizer.getTotalSize() }}
-          className="flex flex-col gap-1 divide-y divide-default/30 px-3 shrink-0 w-full relative">
+        <TrackList height={virtualizer.getTotalSize()}>
           {virtualizer.getVirtualItems().map(item => {
             const track = query.data[item.index]
 
@@ -177,13 +148,48 @@ export function TracksScreen() {
                 onPlay={onPlay}
                 virtualItem={item}
                 isSelected={selection.isSelected(track)}
-                onToggleSelect={selection.toggle}
                 isPlaying={player.current?.hash === track.hash}
+                onToggleSelect={selection.toggle}
               />
             )
           })}
-        </div>
+        </TrackList>
       )}
+    </TrackListContainer>
+  )
+}
+
+export function useTrackSelection() {
+  return useSelection<Track>((a, b) => a === b) // compare by reference
+}
+
+type TrackListProps = { children: React.ReactNode; className?: string; height?: number }
+
+export function TrackList({ children, className, height }: TrackListProps) {
+  return (
+    <div
+      style={height ? { height } : {}}
+      className={cn('flex flex-col gap-1 divide-y divide-default/30 px-3 shrink-0 w-full relative', className)}>
+      {children}
+    </div>
+  )
+}
+
+type TrackListContainerProps = {
+  ref: React.RefObject<HTMLDivElement | null>
+  children: React.ReactNode
+  className?: string
+}
+
+export function TrackListContainer({ ref, children, className }: TrackListContainerProps) {
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        'pt-[calc(theme(spacing.10)+theme(spacing.1))] overflow-auto w-full flex flex-col relative h-full',
+        className,
+      )}>
+      {children}
     </div>
   )
 }
@@ -252,8 +258,53 @@ export const TrackListItem = memo(
     )
   },
   (prev, next) =>
-    prev.data.hash === next.data.hash && prev.isSelected === next.isSelected && prev.isPlaying === next.isPlaying,
+    prev.data.hash === next.data.hash &&
+    prev.isSelected === next.isSelected &&
+    prev.isPlaying === next.isPlaying &&
+    prev.virtualItem === next.virtualItem,
 )
+
+type TrackListControlsContainerProps = { children: React.ReactNode; className?: string }
+
+export function TrackListControlsContainer({ children, className }: TrackListControlsContainerProps) {
+  return (
+    <div
+      className={cn(
+        'px-6 py-2 flex items-center gap-3 sticky top-0 inset-x-0 bg-default-50/25 backdrop-blur-lg z-50 rounded-small',
+        className,
+      )}>
+      {children}
+    </div>
+  )
+}
+
+type SelectAllControlsProps<T> = { data: T[]; selection: UseSelection<T> }
+
+export function SelectAllControls({ selection, data }: SelectAllControlsProps<Track>) {
+  return (
+    <div className="flex items-center gap-2" style={{ width: `calc(${data.length.toString().length}ch + 6rem)` }}>
+      <Checkbox
+        color="success"
+        radius="full"
+        isSelected={selection.values.length === data.length}
+        onValueChange={() => {
+          if (selection.values.length === data.length) return selection.clear()
+          selection.set(data)
+        }}
+      />
+
+      <Button
+        size="sm"
+        radius="sm"
+        color="danger"
+        variant="flat"
+        className="!text-foreground shrink-0 font-mono"
+        onPress={selection.clear}>
+        {selection.values.length} <XIcon className="text-medium" />
+      </Button>
+    </div>
+  )
+}
 
 type CoverProps = { url?: string | null; className?: string }
 

@@ -19,7 +19,6 @@ export function Player() {
   const player = usePlayer()
 
   const [progress, setProgress] = useState<number | number[]>(player.elapsed)
-  const maxProgress = player.current?.duration ? Math.floor(player.current.duration) : -1
 
   useEffect(() => setProgress(player.elapsed), [player.elapsed])
 
@@ -30,7 +29,7 @@ export function Player() {
       <Cover url={player.current?.cover} className="size-80 mb-18" />
 
       <div className="flex items-center gap-2 w-4/5 p-3">
-        <div className="text-large mr-auto">{meta.title || 'Unknown Track'}</div>
+        {meta.title && <div className="text-large mr-auto">{meta.title}</div>}
 
         {meta.album && (
           <div className="text-default-500 flex items-center gap-2 text-small">
@@ -51,7 +50,7 @@ export function Player() {
           color="foreground"
           aria-label="Progress"
           value={progress}
-          maxValue={maxProgress}
+          maxValue={player.current?.duration ?? -1}
           onChange={setProgress}
           onChangeEnd={value => {
             if (typeof value === 'number') {
@@ -76,7 +75,14 @@ export function Player() {
           <SkipBackIcon className="text-xl" />
         </Button>
 
-        <Button isIconOnly radius="full" variant="flat" color="secondary" className="size-20" onPress={player.toggle}>
+        <Button
+          isIconOnly
+          radius="full"
+          variant="flat"
+          color="secondary"
+          className="size-20"
+          onPress={player.toggle}
+          isDisabled={!player.current}>
           {player.isPaused ? <PlayIcon className="text-2xl" /> : <PauseIcon className="text-2xl" />}
         </Button>
 

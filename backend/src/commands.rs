@@ -44,6 +44,11 @@ pub fn player_pause(state: State<AppState, '_>) -> Result<(), Error> {
 }
 
 #[tauri::command]
+pub fn player_set_current(state: State<AppState, '_>, index: usize) -> Result<(), Error> {
+    Ok(state.player.lock().set_current(index)?)
+}
+
+#[tauri::command]
 pub fn player_is_paused(state: State<AppState, '_>) -> Result<bool, Error> {
     Ok(state.player.lock().is_paused())
 }
