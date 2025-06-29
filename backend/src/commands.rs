@@ -64,6 +64,47 @@ pub async fn db_get_tracks(state: State<AppState, '_>) -> Result<Vec<Track>, Err
 }
 
 #[tauri::command]
+pub async fn db_get_playlists(state: State<AppState, '_>) -> Result<Vec<String>, Error> {
+    Ok(state.db.get_playlists().await?)
+}
+
+#[tauri::command]
+pub async fn db_add_playlist(state: State<AppState, '_>, name: String) -> Result<(), Error> {
+    Ok(state.db.add_playlist(name).await?)
+}
+
+#[tauri::command]
+pub async fn db_rename_playlist(
+    state: State<AppState, '_>,
+    name: String,
+    new_name: String,
+) -> Result<(), Error> {
+    Ok(state.db.rename_playlist(name, new_name).await?)
+}
+
+#[tauri::command]
+pub async fn db_remove_playlist(state: State<AppState, '_>, name: String) -> Result<(), Error> {
+    Ok(state.db.remove_playlist(name).await?)
+}
+
+#[tauri::command]
+pub async fn db_get_playlist_tracks(
+    state: State<AppState, '_>,
+    name: String,
+) -> Result<Vec<Track>, Error> {
+    Ok(state.db.get_playlist_tracks(name).await?)
+}
+
+#[tauri::command]
+pub async fn db_set_playlist_tracks(
+    state: State<AppState, '_>,
+    name: String,
+    hashes: Vec<String>,
+) -> Result<(), Error> {
+    Ok(state.db.set_playlist_tracks(name, &hashes).await?)
+}
+
+#[tauri::command]
 pub async fn db_scan_dirs(state: State<AppState, '_>) -> Result<(), Error> {
     Ok(state.db.scan_dirs(&state.db.get_dirs().await?).await?)
 }

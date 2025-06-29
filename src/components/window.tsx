@@ -70,7 +70,7 @@ function NavLink({ url, title, icon: Icon, className }: NavLinkProps) {
     <Button
       as={Link}
       to={url}
-      variant={location.pathname === url ? 'flat' : 'light'}
+      variant={location.pathname.startsWith(url) ? 'flat' : 'light'}
       fullWidth
       radius="sm"
       className={cn('justify-start', className)}>

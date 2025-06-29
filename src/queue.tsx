@@ -4,8 +4,8 @@ import { Button } from '@heroui/react'
 import { useStore } from 'zustand'
 import { usePlayer } from '@/player'
 import { uiStore } from '@/utils'
+import { SelectAllControls } from '@/components'
 import {
-  SelectAllControls,
   TrackList,
   TrackListContainer,
   TrackListControlsContainer,

@@ -12,7 +12,7 @@ import {
   DropdownSection,
   DropdownTrigger,
   Image,
-  Input,
+  useDisclosure,
 } from '@heroui/react'
 import {
   AudioLinesIcon,
@@ -23,16 +23,16 @@ import {
   MusicIcon,
   PlayIcon,
   PlusIcon,
-  SearchIcon,
   UserRoundIcon,
-  XIcon,
 } from 'lucide-react'
 import { useStore } from 'zustand'
 import { formatTime, getAssetUrl, uiStore, useSelection } from '@/utils'
 import { usePlayer } from '@/player'
 import { getTracks, normalizeMeta } from '@/tracks'
+import { addPlaylist, getPlaylists, setPlaylistTracks } from '@/playlists'
+import { SearchBar, SelectAllControls } from '@/components'
+import { PlaylistEditorModal } from '@/playlists/components'
 import type { Track } from '@/tracks'
-import type { UseSelection } from '@/utils'
 
 export function TracksScreen() {
   const navigate = useNavigate()
@@ -63,99 +63,103 @@ export function TracksScreen() {
   }
 
   const selection = useTrackSelection()
+  const playlistEditorModal = useDisclosure()
 
-  const playlists: string[] = []
+  const queryPlaylists = useQuery({ queryKey: ['playlists'], queryFn: getPlaylists })
+  const playlists = queryPlaylists.isSuccess ? queryPlaylists.data : []
 
   return (
-    <TrackListContainer ref={containerRef}>
-      <TrackListControlsContainer>
-        {selection.values.length > 0 ? (
-          <>
-            {query.isSuccess && <SelectAllControls data={query.data} selection={selection} />}
+    <>
+      <TrackListContainer ref={containerRef}>
+        <TrackListControlsContainer>
+          {selection.values.length > 0 ? (
+            <>
+              {query.isSuccess && <SelectAllControls data={query.data} selection={selection} />}
 
-            <Button radius="sm" variant="flat" color="secondary" onPress={() => onPlay(selection.values)}>
-              <PlayIcon className="text-lg" /> Play
-            </Button>
+              <Button radius="sm" variant="flat" color="secondary" onPress={() => onPlay(selection.values)}>
+                <PlayIcon className="text-lg" /> Play
+              </Button>
 
-            <Button radius="sm" variant="flat">
-              <ListVideoIcon className="text-lg" /> Add to Queue
-            </Button>
+              <Button radius="sm" variant="flat">
+                <ListVideoIcon className="text-lg" /> Add to Queue
+              </Button>
 
-            <Dropdown radius="sm" backdrop="opaque">
-              <DropdownTrigger>
-                <Button radius="sm" variant="flat">
-                  <PlusIcon className="text-lg" /> Add to Playlist
-                </Button>
-              </DropdownTrigger>
+              <Dropdown radius="sm" backdrop="opaque">
+                <DropdownTrigger>
+                  <Button radius="sm" variant="flat">
+                    <PlusIcon className="text-lg" /> Add to Playlist
+                  </Button>
+                </DropdownTrigger>
 
-              <DropdownMenu variant="flat">
-                <DropdownSection showDivider={playlists.length > 0} className={cn(!playlists.length && 'mb-0')}>
-                  <DropdownItem key="new" startContent={<ListMusicIcon className="text-lg" />}>
-                    New Playlist
-                  </DropdownItem>
-                </DropdownSection>
+                <DropdownMenu variant="flat">
+                  <DropdownSection showDivider={playlists.length > 0} className={cn(!playlists.length && 'mb-0')}>
+                    <DropdownItem
+                      key="new"
+                      startContent={<ListMusicIcon className="text-lg" />}
+                      onPress={playlistEditorModal.onOpen}>
+                      New Playlist
+                    </DropdownItem>
+                  </DropdownSection>
 
-                <DropdownSection className="mb-0">
-                  {playlists.map(playlist => (
-                    <DropdownItem key={playlist}>{playlist}</DropdownItem>
-                  ))}
-                </DropdownSection>
-              </DropdownMenu>
-            </Dropdown>
-          </>
-        ) : (
-          <>
-            <Button
-              radius="sm"
-              variant="flat"
-              color="secondary"
-              isDisabled={!query.isSuccess}
-              onPress={() => {
-                if (query.isSuccess) onPlay(query.data)
-              }}>
-              <PlayIcon className="text-lg" /> Play All
-            </Button>
+                  <DropdownSection className="mb-0">
+                    {playlists.map(playlist => (
+                      <DropdownItem key={playlist}>{playlist}</DropdownItem>
+                    ))}
+                  </DropdownSection>
+                </DropdownMenu>
+              </Dropdown>
+            </>
+          ) : (
+            <>
+              <Button
+                radius="sm"
+                variant="flat"
+                color="secondary"
+                isDisabled={!query.isSuccess}
+                onPress={() => {
+                  if (query.isSuccess) onPlay(query.data)
+                }}>
+                <PlayIcon className="text-lg" /> Play All
+              </Button>
 
-            <Input
-              radius="sm"
-              variant="flat"
-              placeholder="Search"
-              startContent={<SearchIcon className="text-lg flex-shrink-0 mr-1" />}
-              classNames={{
-                base: 'w-160 ml-auto',
-                input: 'bg-transparent placeholder:text-default-300',
-                innerWrapper: 'bg-transparent',
-                inputWrapper: [
-                  'dark:bg-default/30',
-                  'dark:hover:bg-default/40',
-                  'dark:group-data-[focus=true]:bg-default/40',
-                ],
-              }}
-            />
-          </>
+              <SearchBar value="" onChange={() => {}} />
+            </>
+          )}
+        </TrackListControlsContainer>
+
+        {query.isSuccess && (
+          <TrackList height={virtualizer.getTotalSize()}>
+            {virtualizer.getVirtualItems().map(item => {
+              const track = query.data[item.index]
+
+              return (
+                <TrackListItem
+                  key={track.hash}
+                  data={track}
+                  onPlay={onPlay}
+                  virtualItem={item}
+                  isSelected={selection.isSelected(track)}
+                  isPlaying={player.current?.hash === track.hash}
+                  onToggleSelect={selection.toggle}
+                />
+              )
+            })}
+          </TrackList>
         )}
-      </TrackListControlsContainer>
+      </TrackListContainer>
 
-      {query.isSuccess && (
-        <TrackList height={virtualizer.getTotalSize()}>
-          {virtualizer.getVirtualItems().map(item => {
-            const track = query.data[item.index]
+      <PlaylistEditorModal
+        isOpen={playlistEditorModal.isOpen}
+        onOpenChange={playlistEditorModal.onOpenChange}
+        onSave={async name => {
+          await addPlaylist(name)
+          await setPlaylistTracks(name, selection.values)
 
-            return (
-              <TrackListItem
-                key={track.hash}
-                data={track}
-                onPlay={onPlay}
-                virtualItem={item}
-                isSelected={selection.isSelected(track)}
-                isPlaying={player.current?.hash === track.hash}
-                onToggleSelect={selection.toggle}
-              />
-            )
-          })}
-        </TrackList>
-      )}
-    </TrackListContainer>
+          playlistEditorModal.onClose()
+          navigate(`/playlists/${name}`)
+        }}
+      />
+    </>
   )
 }
 
@@ -270,38 +274,10 @@ export function TrackListControlsContainer({ children, className }: TrackListCon
   return (
     <div
       className={cn(
-        'px-6 py-2 flex items-center gap-3 sticky top-0 inset-x-0 bg-default-50/25 backdrop-blur-lg z-50 rounded-small',
+        'px-6 py-3 flex items-center gap-3 sticky top-0 inset-x-0 bg-default-50/25 backdrop-blur-lg z-50 rounded-small',
         className,
       )}>
       {children}
-    </div>
-  )
-}
-
-type SelectAllControlsProps<T> = { data: T[]; selection: UseSelection<T> }
-
-export function SelectAllControls({ selection, data }: SelectAllControlsProps<Track>) {
-  return (
-    <div className="flex items-center gap-2" style={{ width: `calc(${data.length.toString().length}ch + 6rem)` }}>
-      <Checkbox
-        color="success"
-        radius="full"
-        isSelected={selection.values.length === data.length}
-        onValueChange={() => {
-          if (selection.values.length === data.length) return selection.clear()
-          selection.set(data)
-        }}
-      />
-
-      <Button
-        size="sm"
-        radius="sm"
-        color="danger"
-        variant="flat"
-        className="!text-foreground shrink-0 font-mono"
-        onPress={selection.clear}>
-        {selection.values.length} <XIcon className="text-medium" />
-      </Button>
     </div>
   )
 }

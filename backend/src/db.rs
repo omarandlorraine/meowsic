@@ -62,7 +62,105 @@ impl Db {
         });
 
         let mut tx = self.pool.begin().await?;
+
         sqlx::query("DELETE FROM tracks").execute(&mut *tx).await?;
+        qb.build().execute(&mut *tx).await?;
+        tx.commit().await?;
+
+        Ok(())
+    }
+
+    pub async fn get_playlists(&self) -> Result<Vec<String>> {
+        let entries: Vec<(String,)> = sqlx::query_as("SELECT * FROM playlists")
+            .fetch_all(&self.pool)
+            .await?;
+
+        let names = entries.into_iter().map(|x| x.0).collect();
+
+        Ok(names)
+    }
+
+    // not using drop and insert because of cascading delete
+    pub async fn add_playlist(&self, name: impl AsRef<str>) -> Result<()> {
+        sqlx::query("INSERT INTO playlists (name) VALUES ($1)")
+            .bind(name.as_ref())
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn rename_playlist(
+        &self,
+        name: impl AsRef<str>,
+        new_name: impl AsRef<str>,
+    ) -> Result<()> {
+        sqlx::query("UPDATE playlists SET name = $1 WHERE name = $2")
+            .bind(new_name.as_ref())
+            .bind(name.as_ref())
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn remove_playlist(&self, name: impl AsRef<str>) -> Result<()> {
+        sqlx::query("DELETE FROM playlists WHERE name = $1")
+            .bind(name.as_ref())
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn get_playlist_tracks(&self, name: impl AsRef<str>) -> Result<Vec<Track>> {
+        let entries: Vec<TrackRow> = sqlx::query_as(
+            "
+            SELECT
+                t.hash,
+                t.path,
+                t.name,
+                t.extension,
+                t.duration,
+                t.cover,
+                t.title,
+                t.artist,
+                t.album,
+                t.album_artist,
+                t.date,
+                t.genre
+            FROM tracks AS t
+            JOIN playlist_tracks AS pt ON pt.track_hash = t.hash
+            WHERE pt.playlist_name = $1;
+            ",
+        )
+        .bind(name.as_ref())
+        .fetch_all(&self.pool)
+        .await?;
+
+        let tracks = entries.into_iter().map(Track::from).collect();
+
+        Ok(tracks)
+    }
+
+    pub async fn set_playlist_tracks(
+        &self,
+        name: impl AsRef<str>,
+        hashes: &[impl AsRef<str>],
+    ) -> Result<()> {
+        let mut qb = QueryBuilder::new("INSERT INTO playlist_tracks (playlist_name, track_hash) ");
+
+        qb.push_values(hashes.into_iter().take(32000), |mut b, hash| {
+            b.push_bind(name.as_ref()).push_bind(hash.as_ref());
+        });
+
+        let mut tx = self.pool.begin().await?;
+
+        sqlx::query("DELETE FROM playlist_tracks WHERE playlist_name = $1")
+            .bind(name.as_ref())
+            .execute(&mut *tx)
+            .await?;
+
         qb.build().execute(&mut *tx).await?;
         tx.commit().await?;
 
@@ -115,6 +213,18 @@ impl Db {
                 album_artist    TEXT,
                 date            TEXT,
                 genre           TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS playlists (
+                name    TEXT    PRIMARY KEY                
+            );
+
+            CREATE TABLE IF NOT EXISTS playlist_tracks (
+                playlist_name   TEXT    NOT NULL,
+                track_hash      TEXT    NOT NULL,
+
+                PRIMARY KEY (playlist_name, track_hash),
+                FOREIGN KEY (playlist_name) REFERENCES playlists(name) ON DELETE CASCADE
             );
             ",
         )
