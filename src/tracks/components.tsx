@@ -29,7 +29,7 @@ import { useStore } from 'zustand'
 import { formatTime, getAssetUrl, uiStore, useSelection } from '@/utils'
 import { usePlayer } from '@/player'
 import { getTracks, normalizeMeta } from '@/tracks'
-import { addToExistingPlaylist, addToNewPlaylist, getPlaylists } from '@/playlists'
+import { addPlaylist, addPlaylistTracks, getPlaylists } from '@/playlists'
 import { SearchBar, SelectAllControls } from '@/components'
 import { PlaylistEditorModal } from '@/playlists/components'
 import type { Track } from '@/tracks'
@@ -106,7 +106,7 @@ export function TracksScreen() {
                       <DropdownItem
                         key={name}
                         onPress={async () => {
-                          await addToExistingPlaylist(name, selection.values)
+                          await addPlaylistTracks(name, selection.values)
 
                           selection.clear()
                           navigate(`/playlists/${name}`)
@@ -162,7 +162,8 @@ export function TracksScreen() {
         isOpen={playlistEditorModal.isOpen}
         onOpenChange={playlistEditorModal.onOpenChange}
         onAction={async name => {
-          await addToNewPlaylist(name, selection.values)
+          await addPlaylist(name)
+          await addPlaylistTracks(name, selection.values)
 
           playlistEditorModal.onClose()
           selection.clear()

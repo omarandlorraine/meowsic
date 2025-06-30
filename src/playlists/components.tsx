@@ -7,12 +7,12 @@ import { CheckIcon, MoveRightIcon, PlayIcon, PlusIcon, SquarePenIcon, Trash2Icon
 import { useStore } from 'zustand'
 import { usePlayer } from '@/player'
 import {
-  addToNewPlaylist,
+  addPlaylist,
   getPlaylists,
   getPlaylistTracks,
   removePlaylist,
+  removePlaylistTracks,
   renamePlaylist,
-  setPlaylistTracks,
 } from '@/playlists'
 import { uiStore } from '@/utils'
 import { SearchBar, SelectAllControls } from '@/components'
@@ -68,9 +68,8 @@ export function PlaylistScreen() {
 
   const onRemoveTracks = async () => {
     if (!params.name || !queryPlaylistTracks.isSuccess) return
-    const filtered = queryPlaylistTracks.data.filter(track => !selection.isSelected(track))
 
-    await setPlaylistTracks(params.name, filtered)
+    await removePlaylistTracks(params.name, selection.values)
     await queryPlaylistTracks.refetch()
 
     selection.clear()
@@ -229,7 +228,7 @@ export function PlaylistsScreen() {
         isOpen={editorModal.isOpen}
         onOpenChange={editorModal.onOpenChange}
         onAction={async name => {
-          await addToNewPlaylist(name, [])
+          await addPlaylist(name)
           await query.refetch()
           editorModal.onClose()
         }}

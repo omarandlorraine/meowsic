@@ -131,7 +131,7 @@ impl Db {
                 t.genre
             FROM tracks AS t
             JOIN playlist_tracks AS pt ON pt.track_hash = t.hash
-            WHERE pt.playlist_name = $1;
+            WHERE pt.playlist_name = $1
             ",
         )
         .bind(name.as_ref())
@@ -143,17 +143,45 @@ impl Db {
         Ok(tracks)
     }
 
-    pub async fn set_playlist_tracks(
+    pub async fn remove_playlist_tracks(
+        &self,
+        name: impl AsRef<str>,
+        hashes: Option<&[impl AsRef<str>]>,
+    ) -> Result<()> {
+        if let Some(hashes) = hashes {
+            if hashes.is_empty() {
+                return Ok(());
+            }
+
+            let mut qb: QueryBuilder<Sqlite> =
+                QueryBuilder::new("DELETE FROM playlist_tracks WHERE playlist_name = ");
+
+            qb.push_bind(name.as_ref());
+            qb.push(" AND track_hash IN (");
+            let mut separated = qb.separated(", ");
+
+            for hash in hashes.iter().take(32000) {
+                separated.push_bind(hash.as_ref());
+            }
+
+            qb.push(")");
+            qb.build().execute(&self.pool).await?;
+        } else {
+            sqlx::query("DELETE FROM playlist_tracks WHERE playlist_name = $1")
+                .bind(name.as_ref())
+                .execute(&self.pool)
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn add_playlist_tracks(
         &self,
         name: impl AsRef<str>,
         hashes: &[impl AsRef<str>],
     ) -> Result<()> {
         if hashes.is_empty() {
-            sqlx::query("DELETE FROM playlist_tracks WHERE playlist_name = $1")
-                .bind(name.as_ref())
-                .execute(&self.pool)
-                .await?;
-
             return Ok(());
         }
 
@@ -164,15 +192,7 @@ impl Db {
             b.push_bind(name.as_ref()).push_bind(hash.as_ref());
         });
 
-        let mut tx = self.pool.begin().await?;
-
-        sqlx::query("DELETE FROM playlist_tracks WHERE playlist_name = $1")
-            .bind(name.as_ref())
-            .execute(&mut *tx)
-            .await?;
-
-        qb.build().execute(&mut *tx).await?;
-        tx.commit().await?;
+        qb.build().execute(&self.pool).await?;
 
         Ok(())
     }
@@ -230,8 +250,9 @@ impl Db {
             );
 
             CREATE TABLE IF NOT EXISTS playlist_tracks (
-                playlist_name   TEXT    NOT NULL,
-                track_hash      TEXT    NOT NULL,
+                playlist_name   TEXT        NOT NULL,
+                track_hash      TEXT        NOT NULL,
+                rank            INTEGER     NOT NULL,
 
                 PRIMARY KEY (playlist_name, track_hash),
                 FOREIGN KEY (playlist_name) REFERENCES playlists(name)
