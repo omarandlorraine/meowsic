@@ -96,12 +96,24 @@ pub async fn db_get_playlist_tracks(
 }
 
 #[tauri::command]
-pub async fn db_set_playlist_tracks(
+pub async fn db_add_playlist_tracks(
     state: State<AppState, '_>,
     name: String,
     hashes: Vec<String>,
 ) -> Result<(), Error> {
-    Ok(state.db.set_playlist_tracks(name, &hashes).await?)
+    Ok(state.db.add_playlist_tracks(name, &hashes).await?)
+}
+
+#[tauri::command]
+pub async fn db_remove_playlist_tracks(
+    state: State<AppState, '_>,
+    name: String,
+    hashes: Option<Vec<String>>,
+) -> Result<(), Error> {
+    Ok(state
+        .db
+        .remove_playlist_tracks(name, hashes.as_deref())
+        .await?)
 }
 
 #[tauri::command]

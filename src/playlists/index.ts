@@ -21,16 +21,10 @@ export async function getPlaylistTracks(name: string) {
   return await invoke<Track[]>('db_get_playlist_tracks', { name })
 }
 
-export async function setPlaylistTracks(name: string, tracks: Track[]) {
-  return await invoke('db_set_playlist_tracks', { name, hashes: tracks.map(t => t.hash) })
+export async function addPlaylistTracks(name: string, tracks: Track[]) {
+  return await invoke('db_add_playlist_tracks', { name, hashes: tracks.map(t => t.hash) })
 }
 
-export async function addToExistingPlaylist(name: string, tracks: Track[]) {
-  const existing = await getPlaylistTracks(name)
-  await setPlaylistTracks(name, existing.concat(tracks))
-}
-
-export async function addToNewPlaylist(name: string, tracks: Track[]) {
-  await addPlaylist(name)
-  await setPlaylistTracks(name, tracks)
+export async function removePlaylistTracks(name: string, tracks?: Track[] | null) {
+  return await invoke('db_remove_playlist_tracks', { name, hashes: tracks?.map(t => t.hash) })
 }
