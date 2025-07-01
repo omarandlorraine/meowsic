@@ -26,8 +26,7 @@ import {
 } from 'lucide-react'
 import { Virtuoso } from 'react-virtuoso'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
-import { useStore } from 'zustand'
-import { arraySwap, formatTime, getAssetUrl, uiStore, useSelection } from '@/utils'
+import { formatTime, getAssetUrl, useSelection } from '@/utils'
 import { usePlayer } from '@/player'
 import { getTracks, normalizeMeta } from '@/tracks'
 import { addPlaylist, addPlaylistTracks, getPlaylists } from '@/playlists'
@@ -58,13 +57,6 @@ export function TracksScreen() {
 
   const queryPlaylists = useQuery({ queryKey: ['playlists'], queryFn: getPlaylists })
   const playlists = queryPlaylists.data ?? []
-
-  const onDragEnd = (result: DropResult) => {
-    if (!result.destination) return
-    if (result.source.index === result.destination.index) return
-
-    setTracks(state => arraySwap(state, result.source.index, result.destination!.index))
-  }
 
   return (
     <div className="flex flex-col size-full relative">
@@ -133,8 +125,8 @@ export function TracksScreen() {
         )}
       </ControlsContainer>
 
-      <List data={tracks} onDragEnd={onDragEnd}>
-        {(item, index, draggableProps) => (
+      <List data={tracks}>
+        {(item, index) => (
           <ListItem
             key={item.hash}
             index={index}
@@ -143,7 +135,6 @@ export function TracksScreen() {
             isSelected={selection.isSelected(item)}
             isPlaying={player.current?.hash === item.hash}
             onToggleSelect={selection.toggle}
-            draggableProps={draggableProps}
           />
         )}
       </List>
@@ -167,13 +158,11 @@ export function TracksScreen() {
 
 type ListProps = {
   data: Track[]
-  onDragEnd: (result: DropResult) => void
+  onDragEnd?: (result: DropResult) => void
   children: (item: Track, index: number, draggableProps: DraggableProps) => React.ReactNode
 }
 
-export function List({ data, children, onDragEnd }: ListProps) {
-  const fontSize = useStore(uiStore, state => state.fontSize) // move up if needed
-
+export function List({ data, children, onDragEnd = () => {} }: ListProps) {
   const renderClone = (provided: DraggableProvided, snapshot: DraggableStateSnapshot, rubric: DraggableRubric) => (
     <ListItem data={data[rubric.source.index]} draggableProps={{ provided, snapshot }} />
   )
@@ -190,7 +179,6 @@ export function List({ data, children, onDragEnd }: ListProps) {
               data={data}
               overscan={5}
               className="size-full shrink-0"
-              fixedItemHeight={fontSize * 5.5 + 1}
               components={{ Item: VirtualItem, List: VirtualList, Header: VirtualHeader }}
               itemContent={(index, item) => {
                 return (
@@ -229,22 +217,24 @@ export const ListItem = memo(
         {...draggableProps?.provided.draggableProps}
         {...draggableProps?.provided.dragHandleProps}
         style={draggableProps?.provided.draggableProps.style}
-        className={cn('flex items-center gap-3 p-3')}>
-        {/* ! THIS CHECKBOX CAN CAUSE LAGS */}
+        className={cn(
+          'flex items-center gap-3 p-3',
+          draggableProps?.snapshot.isDragging &&
+            'bg-secondary-50/25 border-secondary/10 border saturate-125 backdrop-blur-lg rounded-small',
+        )}>
         <Checkbox
           color="success"
           radius="full"
           isSelected={isSelected}
+          isDisabled={draggableProps?.snapshot.isDragging}
           onValueChange={() => {
             if (onToggleSelect) onToggleSelect(data, isSelected)
           }}
         />
 
-        {onPlay && (
-          <Button isIconOnly radius="full" variant="flat" onPress={() => onPlay(data)}>
-            <PlayIcon className="text-lg" />
-          </Button>
-        )}
+        <Button isIconOnly radius="full" variant="flat" isDisabled={!onPlay} onPress={() => onPlay?.(data)}>
+          <PlayIcon className="text-lg" />
+        </Button>
 
         <Cover url={data.cover} className="size-16 mx-3" />
 
@@ -346,33 +336,12 @@ function VirtualItem({ item, ...props }: VirtuosoItemProps<Track>) {
 }
 
 function VirtualList(props: React.HTMLAttributes<HTMLDivElement>) {
-  return <div {...props} className="flex flex-col gap-1 divide-y divide-default/30 px-3 shrink-0 w-full" />
+  return <div {...props} className="flex flex-col gap-1 px-3 shrink-0 w-full divide-y divide-default/30" />
 }
 
 function VirtualHeader(props: VirtuosoContextProps<Track>) {
   return <div {...props} className="h-[calc(theme(spacing.10)+theme(spacing.16)+theme(spacing.4))]" />
 }
-
-type TrackListContainerProps = {
-  ref: React.RefObject<HTMLDivElement | null>
-  children: React.ReactNode
-  className?: string
-}
-
-export function TrackListContainer({ ref, children, className }: TrackListContainerProps) {
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        'pt-[calc(theme(spacing.10)+theme(spacing.2))] overflow-auto w-full flex flex-col relative h-full',
-        className,
-      )}>
-      {children}
-    </div>
-  )
-}
-
-export { VirtualList as TrackList, ControlsContainer as TrackListControlsContainer, ListItem as TrackListItem }
 
 export function useTrackSelection() {
   return useSelection<Track>((a, b) => a === b) // compare by reference

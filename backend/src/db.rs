@@ -30,11 +30,11 @@ impl Db {
 
         let tracks = entries.into_iter().map(Track::from).collect();
 
-        let multiplier = 10; // TEST large dataset -> upto 376832 tracks at 12x
-        let mut tracks: Vec<Track> = tracks; 
-        for _ in 0..multiplier {
-            tracks.extend(tracks.clone().into_iter());
-        }
+        // let multiplier = 10; // TEST large dataset -> upto 376832 tracks at 12x
+        // let mut tracks: Vec<Track> = tracks;
+        // for _ in 0..multiplier {
+        //     tracks.extend(tracks.clone().into_iter());
+        // }
 
         Ok(tracks)
     }

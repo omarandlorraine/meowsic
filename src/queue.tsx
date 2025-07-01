@@ -1,36 +1,11 @@
-import { useLayoutEffect, useRef } from 'react'
-import { useVirtualizer } from '@tanstack/react-virtual'
 import { Button } from '@heroui/react'
-import { useStore } from 'zustand'
 import { usePlayer } from '@/player'
-import { uiStore } from '@/utils'
-import { SelectAllControls } from '@/components'
-import {
-  TrackList,
-  TrackListContainer,
-  TrackListControlsContainer,
-  TrackListItem,
-  useTrackSelection,
-} from '@/tracks/components'
 import { Trash2Icon } from 'lucide-react'
+import { SelectAllControls } from '@/components'
+import { ControlsContainer, List, ListItem, useTrackSelection } from '@/tracks/components'
 
 export function QueueScreen() {
   const player = usePlayer()
-  const fontSize = useStore(uiStore, state => state.fontSize)
-
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  const virtualizer = useVirtualizer({
-    count: player.queue.length,
-    getScrollElement: () => containerRef.current,
-    estimateSize: () => fontSize * 5.5 + 1, // height of cover + padding-y + 1px border
-    overscan: 5,
-  })
-
-  useLayoutEffect(() => {
-    virtualizer.measure()
-  }, [fontSize])
-
   const selection = useTrackSelection()
 
   const onRemove = async () => {
@@ -59,13 +34,12 @@ export function QueueScreen() {
       }
     }
 
-    virtualizer.measure()
     selection.clear()
   }
 
   return (
-    <TrackListContainer ref={containerRef}>
-      <TrackListControlsContainer>
+    <div className="flex flex-col size-full relative">
+      <ControlsContainer>
         {selection.values.length > 0 && <SelectAllControls data={player.queue} selection={selection} />}
 
         <Button
@@ -77,28 +51,24 @@ export function QueueScreen() {
           isDisabled={!player.queue.length}>
           <Trash2Icon className="text-lg" /> Remove {selection.values.length > 0 ? 'Selected' : 'All'}
         </Button>
-      </TrackListControlsContainer>
+      </ControlsContainer>
 
-      <TrackList height={virtualizer.getTotalSize()}>
-        {virtualizer.getVirtualItems().map(item => {
-          const track = player.queue[item.index]
-
-          return (
-            <TrackListItem
-              key={track.hash}
-              data={track}
-              virtualItem={item}
-              isSelected={selection.isSelected(track)}
-              isPlaying={player.current?.hash === track.hash}
-              onToggleSelect={selection.toggle}
-              onPlay={async () => {
-                await player.goto(item.index)
-                await player.play()
-              }}
-            />
-          )
-        })}
-      </TrackList>
-    </TrackListContainer>
+      <List data={player.queue}>
+        {(item, index) => (
+          <ListItem
+            key={item.hash}
+            index={index}
+            data={item}
+            isSelected={selection.isSelected(item)}
+            isPlaying={player.current?.hash === item.hash}
+            onToggleSelect={selection.toggle}
+            onPlay={async () => {
+              await player.goto(index)
+              await player.play()
+            }}
+          />
+        )}
+      </List>
+    </div>
   )
 }
