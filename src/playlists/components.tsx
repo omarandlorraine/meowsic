@@ -1,10 +1,9 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useVirtualizer } from '@tanstack/react-virtual'
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, Input, useDisclosure } from '@heroui/react'
 import { CheckIcon, MoveRightIcon, PlayIcon, PlusIcon, SquarePenIcon, Trash2Icon } from 'lucide-react'
-import { useStore } from 'zustand'
+import { arraySwap } from '@/utils'
 import { usePlayer } from '@/player'
 import {
   addPlaylist,
@@ -14,15 +13,9 @@ import {
   removePlaylistTracks,
   renamePlaylist,
 } from '@/playlists'
-import { uiStore } from '@/utils'
 import { SearchBar, SelectAllControls } from '@/components'
-import {
-  useTrackSelection,
-  TrackListContainer,
-  TrackListControlsContainer,
-  TrackList,
-  TrackListItem,
-} from '@/tracks/components'
+import { useTrackSelection, ControlsContainer, ListItem, List } from '@/tracks/components'
+import type { DropResult } from '@hello-pangea/dnd'
 import type { Track } from '@/tracks'
 
 export function PlaylistScreen() {
@@ -30,34 +23,26 @@ export function PlaylistScreen() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const player = usePlayer()
-  const fontSize = useStore(uiStore, state => state.fontSize)
-
-  const queryPlaylistTracks = useQuery({
-    enabled: !!params.name,
-    queryKey: ['playlist-tracks', params.name],
-    queryFn: async () => {
-      if (!params.name) throw new Error('Missing playlist name')
-      return getPlaylistTracks(params.name)
-    },
-  })
-
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  const virtualizer = useVirtualizer({
-    enabled: queryPlaylistTracks.isSuccess,
-    count: queryPlaylistTracks.data?.length ?? 0,
-    getScrollElement: () => containerRef.current,
-    estimateSize: () => fontSize * 5.5 + 1, // height of cover + padding-y + 1px border
-    overscan: 5,
-  })
-
-  useLayoutEffect(() => {
-    virtualizer.measure()
-  }, [fontSize])
-
   const selection = useTrackSelection()
   const editorModal = useDisclosure()
   const [editorType, setEditorType] = useState<EditorType | null>(null)
+
+  const queryPlaylistTracks = useQuery({
+    queryKey: ['playlist-tracks', params.name],
+    queryFn: async () => await getPlaylistTracks(params.name!),
+    enabled: !!params.name,
+  })
+
+  const [tracks, setTracks] = useState(queryPlaylistTracks.data ?? [])
+
+  useEffect(() => setTracks(queryPlaylistTracks.data ?? []), [queryPlaylistTracks.data])
+
+  const onDragEnd = (result: DropResult) => {
+    if (!result.destination) return
+    if (result.source.index === result.destination.index) return
+
+    setTracks(state => arraySwap(state, result.source.index, result.destination!.index))
+  }
 
   const onPlay = async (data: Track | Track[]) => {
     await player.setQueue(Array.isArray(data) ? data : [data])
@@ -67,7 +52,7 @@ export function PlaylistScreen() {
   }
 
   const onRemoveTracks = async () => {
-    if (!params.name || !queryPlaylistTracks.isSuccess) return
+    if (!params.name || !selection.values.length) return
 
     await removePlaylistTracks(params.name, selection.values)
     await queryPlaylistTracks.refetch()
@@ -76,84 +61,74 @@ export function PlaylistScreen() {
   }
 
   return (
-    <>
-      <TrackListContainer ref={containerRef}>
-        <TrackListControlsContainer>
-          {selection.values.length > 0 ? (
-            <>
-              {queryPlaylistTracks.isSuccess && (
-                <SelectAllControls data={queryPlaylistTracks.data} selection={selection} />
-              )}
+    <div className="flex flex-col size-full relative">
+      <ControlsContainer>
+        {selection.values.length > 0 ? (
+          <>
+            <SelectAllControls data={tracks} selection={selection} />
 
-              <Button radius="sm" variant="flat" color="danger" className="!text-foreground" onPress={onRemoveTracks}>
-                <Trash2Icon className="text-lg" /> Remove Selected
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                radius="sm"
-                variant="flat"
-                color="secondary"
-                isDisabled={!queryPlaylistTracks.isSuccess || !queryPlaylistTracks.data.length}
-                onPress={() => {
-                  if (queryPlaylistTracks.isSuccess && queryPlaylistTracks.data.length > 0)
-                    onPlay(queryPlaylistTracks.data)
-                }}>
-                <PlayIcon className="text-lg" /> Play All
-              </Button>
+            <Button radius="sm" variant="flat" color="danger" className="!text-foreground" onPress={onRemoveTracks}>
+              <Trash2Icon className="text-lg" /> Remove Selected
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              radius="sm"
+              variant="flat"
+              color="secondary"
+              isDisabled={!tracks.length}
+              onPress={() => {
+                if (tracks.length > 0) onPlay(tracks)
+              }}>
+              <PlayIcon className="text-lg" /> Play All
+            </Button>
 
-              <div className="text-large px-6 border-x border-default/30">{params.name}</div>
+            <div className="text-large px-6 border-x border-default/30">{params.name}</div>
 
-              <Button
-                radius="sm"
-                variant="flat"
-                size="sm"
-                onPress={() => {
-                  setEditorType('update')
-                  editorModal.onOpen()
-                }}>
-                <SquarePenIcon className="text-medium text-default-500" /> Edit
-              </Button>
+            <Button
+              radius="sm"
+              variant="flat"
+              size="sm"
+              onPress={() => {
+                setEditorType('update')
+                editorModal.onOpen()
+              }}>
+              <SquarePenIcon className="text-medium text-default-500" /> Edit
+            </Button>
 
-              <Button
-                radius="sm"
-                variant="flat"
-                color="danger"
-                size="sm"
-                className="!text-foreground"
-                onPress={() => {
-                  setEditorType('remove')
-                  editorModal.onOpen()
-                }}>
-                <Trash2Icon className="text-medium" /> Remove
-              </Button>
+            <Button
+              radius="sm"
+              variant="flat"
+              color="danger"
+              size="sm"
+              className="!text-foreground"
+              onPress={() => {
+                setEditorType('remove')
+                editorModal.onOpen()
+              }}>
+              <Trash2Icon className="text-medium" /> Remove
+            </Button>
 
-              <SearchBar value="" onChange={() => {}} />
-            </>
-          )}
-        </TrackListControlsContainer>
-
-        {queryPlaylistTracks.isSuccess && (
-          <TrackList height={virtualizer.getTotalSize()}>
-            {virtualizer.getVirtualItems().map(item => {
-              const track = queryPlaylistTracks.data[item.index]
-
-              return (
-                <TrackListItem
-                  key={track.hash}
-                  data={track}
-                  onPlay={onPlay}
-                  virtualItem={item}
-                  isSelected={selection.isSelected(track)}
-                  isPlaying={player.current?.hash === track.hash}
-                  onToggleSelect={selection.toggle}
-                />
-              )
-            })}
-          </TrackList>
+            <SearchBar value="" onChange={() => {}} />
+          </>
         )}
-      </TrackListContainer>
+      </ControlsContainer>
+
+      <List data={tracks} onDragEnd={onDragEnd}>
+        {(item, index, draggableProps) => (
+          <ListItem
+            key={item.hash}
+            index={index}
+            data={item}
+            onPlay={onPlay}
+            isSelected={selection.isSelected(item)}
+            isPlaying={player.current?.hash === item.hash}
+            onToggleSelect={selection.toggle}
+            draggableProps={draggableProps}
+          />
+        )}
+      </List>
 
       {params.name && (
         <>
@@ -185,7 +160,7 @@ export function PlaylistScreen() {
           />
         </>
       )}
-    </>
+    </div>
   )
 }
 
@@ -259,7 +234,7 @@ export function PlaylistEditorModal({ isOpen, onOpenChange, existing, type, onAc
 
         <ModalBody>
           {type === 'remove' ? (
-            <p className="text-default-500">Are you sure you want to remove this playlist?</p>
+            <div className="text-default-500">Are you sure you want to remove this playlist?</div>
           ) : (
             <Input
               variant="flat"

@@ -30,8 +30,9 @@ impl Db {
 
         let tracks = entries.into_iter().map(Track::from).collect();
 
-        // let mut tracks: Vec<Track> = tracks; // TEST large dataset -> 376832 tracks
-        // for _ in 0..12 {
+        // let multiplier = 10; // TEST large dataset -> upto 376832 tracks at 12x
+        // let mut tracks: Vec<Track> = tracks;
+        // for _ in 0..multiplier {
         //     tracks.extend(tracks.clone().into_iter());
         // }
 
@@ -252,7 +253,7 @@ impl Db {
             CREATE TABLE IF NOT EXISTS playlist_tracks (
                 playlist_name   TEXT        NOT NULL,
                 track_hash      TEXT        NOT NULL,
-                rank            INTEGER     NOT NULL,
+                position        INTEGER     NOT NULL,
 
                 PRIMARY KEY (playlist_name, track_hash),
                 FOREIGN KEY (playlist_name) REFERENCES playlists(name)
