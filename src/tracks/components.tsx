@@ -1,7 +1,6 @@
-import { memo, useLayoutEffect, useRef } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { useVirtualizer, VirtualItem } from '@tanstack/react-virtual'
 import {
   Button,
   Checkbox,
@@ -25,35 +24,27 @@ import {
   PlusIcon,
   UserRoundIcon,
 } from 'lucide-react'
+import { Virtuoso } from 'react-virtuoso'
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { useStore } from 'zustand'
-import { formatTime, getAssetUrl, uiStore, useSelection } from '@/utils'
+import { arraySwap, formatTime, getAssetUrl, uiStore, useSelection } from '@/utils'
 import { usePlayer } from '@/player'
 import { getTracks, normalizeMeta } from '@/tracks'
 import { addPlaylist, addPlaylistTracks, getPlaylists } from '@/playlists'
 import { SearchBar, SelectAllControls } from '@/components'
 import { PlaylistEditorModal } from '@/playlists/components'
+import type { ItemProps as VirtuosoItemProps, ContextProp as VirtuosoContextProps } from 'react-virtuoso'
+import type { DraggableProvided, DraggableStateSnapshot, DropResult, DraggableRubric } from '@hello-pangea/dnd'
 import type { Track } from '@/tracks'
 
 export function TracksScreen() {
   const navigate = useNavigate()
   const player = usePlayer()
-  const fontSize = useStore(uiStore, state => state.fontSize)
 
   const query = useQuery({ queryKey: ['tracks'], queryFn: getTracks })
+  const [tracks, setTracks] = useState(query.data ?? [])
 
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  const virtualizer = useVirtualizer({
-    enabled: query.isSuccess,
-    count: query.data?.length ?? 0,
-    getScrollElement: () => containerRef.current,
-    estimateSize: () => fontSize * 5.5 + 1, // height of cover + padding-y + 1px border
-    overscan: 5,
-  })
-
-  useLayoutEffect(() => {
-    virtualizer.measure()
-  }, [fontSize])
+  useEffect(() => setTracks(query.data ?? []), [query.data])
 
   const onPlay = async (data: Track | Track[]) => {
     await player.setQueue(Array.isArray(data) ? data : [data])
@@ -66,96 +57,96 @@ export function TracksScreen() {
   const playlistEditorModal = useDisclosure()
 
   const queryPlaylists = useQuery({ queryKey: ['playlists'], queryFn: getPlaylists })
-  const playlists = queryPlaylists.isSuccess ? queryPlaylists.data : []
+  const playlists = queryPlaylists.data ?? []
+
+  const onDragEnd = (result: DropResult) => {
+    if (!result.destination) return
+    if (result.source.index === result.destination.index) return
+
+    setTracks(state => arraySwap(state, result.source.index, result.destination!.index))
+  }
 
   return (
-    <>
-      <TrackListContainer ref={containerRef}>
-        <TrackListControlsContainer>
-          {selection.values.length > 0 ? (
-            <>
-              {query.isSuccess && <SelectAllControls data={query.data} selection={selection} />}
+    <div className="flex flex-col size-full relative">
+      <ControlsContainer>
+        {selection.values.length > 0 ? (
+          <>
+            {query.isSuccess && <SelectAllControls data={query.data} selection={selection} />}
 
-              <Button radius="sm" variant="flat" color="secondary" onPress={() => onPlay(selection.values)}>
-                <PlayIcon className="text-lg" /> Play
-              </Button>
+            <Button radius="sm" variant="flat" color="secondary" onPress={() => onPlay(selection.values)}>
+              <PlayIcon className="text-lg" /> Play
+            </Button>
 
-              <Button radius="sm" variant="flat">
-                <ListVideoIcon className="text-lg" /> Add to Queue
-              </Button>
+            <Button radius="sm" variant="flat">
+              <ListVideoIcon className="text-lg" /> Add to Queue
+            </Button>
 
-              <Dropdown radius="sm" backdrop="opaque">
-                <DropdownTrigger>
-                  <Button radius="sm" variant="flat">
-                    <PlusIcon className="text-lg" /> Add to Playlist
-                  </Button>
-                </DropdownTrigger>
+            <Dropdown radius="sm" backdrop="opaque">
+              <DropdownTrigger>
+                <Button radius="sm" variant="flat">
+                  <PlusIcon className="text-lg" /> Add to Playlist
+                </Button>
+              </DropdownTrigger>
 
-                <DropdownMenu variant="flat">
-                  <DropdownSection showDivider={playlists.length > 0} className={cn(!playlists.length && 'mb-0')}>
+              <DropdownMenu variant="flat">
+                <DropdownSection showDivider={playlists.length > 0} className={cn(!playlists.length && 'mb-0')}>
+                  <DropdownItem
+                    key="new"
+                    startContent={<ListMusicIcon className="text-lg" />}
+                    onPress={playlistEditorModal.onOpen}>
+                    New Playlist
+                  </DropdownItem>
+                </DropdownSection>
+
+                <DropdownSection className="mb-0">
+                  {playlists.map(name => (
                     <DropdownItem
-                      key="new"
-                      startContent={<ListMusicIcon className="text-lg" />}
-                      onPress={playlistEditorModal.onOpen}>
-                      New Playlist
+                      key={name}
+                      onPress={async () => {
+                        await addPlaylistTracks(name, selection.values)
+
+                        selection.clear()
+                        navigate(`/playlists/${name}`)
+                      }}>
+                      {name}
                     </DropdownItem>
-                  </DropdownSection>
+                  ))}
+                </DropdownSection>
+              </DropdownMenu>
+            </Dropdown>
+          </>
+        ) : (
+          <>
+            <Button
+              radius="sm"
+              variant="flat"
+              color="secondary"
+              isDisabled={!query.isSuccess || !query.data.length}
+              onPress={() => {
+                if (query.isSuccess && query.data.length > 0) onPlay(query.data)
+              }}>
+              <PlayIcon className="text-lg" /> Play All
+            </Button>
 
-                  <DropdownSection className="mb-0">
-                    {playlists.map(name => (
-                      <DropdownItem
-                        key={name}
-                        onPress={async () => {
-                          await addPlaylistTracks(name, selection.values)
-
-                          selection.clear()
-                          navigate(`/playlists/${name}`)
-                        }}>
-                        {name}
-                      </DropdownItem>
-                    ))}
-                  </DropdownSection>
-                </DropdownMenu>
-              </Dropdown>
-            </>
-          ) : (
-            <>
-              <Button
-                radius="sm"
-                variant="flat"
-                color="secondary"
-                isDisabled={!query.isSuccess || !query.data.length}
-                onPress={() => {
-                  if (query.isSuccess && query.data.length > 0) onPlay(query.data)
-                }}>
-                <PlayIcon className="text-lg" /> Play All
-              </Button>
-
-              <SearchBar value="" onChange={() => {}} />
-            </>
-          )}
-        </TrackListControlsContainer>
-
-        {query.isSuccess && (
-          <TrackList height={virtualizer.getTotalSize()}>
-            {virtualizer.getVirtualItems().map(item => {
-              const track = query.data[item.index]
-
-              return (
-                <TrackListItem
-                  key={track.hash}
-                  data={track}
-                  onPlay={onPlay}
-                  virtualItem={item}
-                  isSelected={selection.isSelected(track)}
-                  isPlaying={player.current?.hash === track.hash}
-                  onToggleSelect={selection.toggle}
-                />
-              )
-            })}
-          </TrackList>
+            <SearchBar value="" onChange={() => {}} />
+          </>
         )}
-      </TrackListContainer>
+      </ControlsContainer>
+
+      <List data={tracks} onDragEnd={onDragEnd}>
+        {(item, index, draggableProps) => (
+          <ListItem
+            key={item.hash}
+            index={index}
+            data={item}
+            onPlay={onPlay}
+            isSelected={selection.isSelected(item)}
+            isPlaying={player.current?.hash === item.hash}
+            onToggleSelect={selection.toggle}
+            draggableProps={draggableProps}
+          />
+        )}
+      </List>
 
       <PlaylistEditorModal
         type="new"
@@ -170,62 +161,75 @@ export function TracksScreen() {
           navigate(`/playlists/${name}`)
         }}
       />
-    </>
-  )
-}
-
-export function useTrackSelection() {
-  return useSelection<Track>((a, b) => a === b) // compare by reference
-}
-
-type TrackListProps = { children: React.ReactNode; className?: string; height?: number }
-
-export function TrackList({ children, className, height }: TrackListProps) {
-  return (
-    <div
-      style={height ? { height } : {}}
-      className={cn('flex flex-col gap-1 divide-y divide-default/30 px-3 shrink-0 w-full relative', className)}>
-      {children}
     </div>
   )
 }
 
-type TrackListContainerProps = {
-  ref: React.RefObject<HTMLDivElement | null>
-  children: React.ReactNode
-  className?: string
+type ListProps = {
+  data: Track[]
+  onDragEnd: (result: DropResult) => void
+  children: (item: Track, index: number, draggableProps: DraggableProps) => React.ReactNode
 }
 
-export function TrackListContainer({ ref, children, className }: TrackListContainerProps) {
+export function List({ data, children, onDragEnd }: ListProps) {
+  const fontSize = useStore(uiStore, state => state.fontSize) // move up if needed
+
+  const renderClone = (provided: DraggableProvided, snapshot: DraggableStateSnapshot, rubric: DraggableRubric) => (
+    <ListItem data={data[rubric.source.index]} draggableProps={{ provided, snapshot }} />
+  )
+
   return (
-    <div
-      ref={ref}
-      className={cn(
-        'pt-[calc(theme(spacing.10)+theme(spacing.2))] overflow-auto w-full flex flex-col relative h-full',
-        className,
-      )}>
-      {children}
-    </div>
+    <DragDropContext onDragEnd={onDragEnd}>
+      <Droppable mode="virtual" droppableId="droppable" renderClone={renderClone}>
+        {provided => {
+          const ref = (el: Window | HTMLElement | null) => provided.innerRef(el as HTMLElement)
+
+          return (
+            <Virtuoso
+              scrollerRef={ref}
+              data={data}
+              overscan={5}
+              className="size-full shrink-0"
+              fixedItemHeight={fontSize * 5.5 + 1}
+              components={{ Item: VirtualItem, List: VirtualList, Header: VirtualHeader }}
+              itemContent={(index, item) => {
+                return (
+                  <Draggable draggableId={item.hash} index={index} key={item.hash}>
+                    {(provided, snapshot) => children(item, index, { provided, snapshot })}
+                  </Draggable>
+                )
+              }}
+            />
+          )
+        }}
+      </Droppable>
+    </DragDropContext>
   )
 }
 
-type TrackListItemProps = {
+type DraggableProps = { provided: DraggableProvided; snapshot: DraggableStateSnapshot }
+
+type ListItemProps = {
   data: Track
   isPlaying?: boolean
   isSelected?: boolean
-  virtualItem?: VirtualItem
   onPlay?: (data: Track) => void
   onToggleSelect?: (data: Track, previouslySelected?: boolean) => void
+  index?: number
+  draggableProps?: DraggableProps
 }
 
-export const TrackListItem = memo(
-  ({ data, isPlaying, isSelected, onPlay, onToggleSelect, virtualItem }: TrackListItemProps) => {
+export const ListItem = memo(
+  ({ data, isPlaying, isSelected, onPlay, onToggleSelect, draggableProps }: ListItemProps) => {
     const meta = normalizeMeta(data)
 
     return (
       <div
-        className={cn('flex items-center gap-3 p-3', virtualItem && 'absolute top-0 inset-x-3')}
-        style={virtualItem ? { height: virtualItem.size, transform: `translateY(${virtualItem.start}px)` } : {}}>
+        ref={draggableProps?.provided.innerRef}
+        {...draggableProps?.provided.draggableProps}
+        {...draggableProps?.provided.dragHandleProps}
+        style={draggableProps?.provided.draggableProps.style}
+        className={cn('flex items-center gap-3 p-3')}>
         {/* ! THIS CHECKBOX CAN CAUSE LAGS */}
         <Checkbox
           color="success"
@@ -276,23 +280,9 @@ export const TrackListItem = memo(
     prev.data.hash === next.data.hash &&
     prev.isSelected === next.isSelected &&
     prev.isPlaying === next.isPlaying &&
-    prev.virtualItem === next.virtualItem,
+    prev.index === next.index &&
+    prev.draggableProps === next.draggableProps,
 )
-
-type TrackListControlsContainerProps = { children: React.ReactNode; className?: string }
-
-export function TrackListControlsContainer({ children, className }: TrackListControlsContainerProps) {
-  return (
-    <div
-      className={cn(
-        'px-6 py-3 flex items-center gap-3 rounded-small',
-        'sticky top-0 inset-x-0 bg-default-50/25 backdrop-blur-lg z-50 backdrop-saturate-125',
-        className,
-      )}>
-      {children}
-    </div>
-  )
-}
 
 type CoverProps = { url?: string | null; className?: string }
 
@@ -323,3 +313,77 @@ export function CoverPlaceholder() {
     </div>
   )
 }
+
+export function ControlsContainer({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      {...props}
+      className={cn(
+        'px-6 py-3 flex items-center gap-3 rounded-small absolute top-[calc(theme(spacing.10)+theme(spacing.2))] left-0 right-3',
+        'bg-default-50/25 backdrop-blur-lg z-50 backdrop-saturate-125',
+        className,
+      )}
+    />
+  )
+}
+
+function VirtualItem({ item, ...props }: VirtuosoItemProps<Track>) {
+  // needed to preserve height
+  const [size, setSize] = useState(0)
+  const knownSize = props['data-known-size']
+
+  useEffect(() => {
+    if (knownSize) setSize(knownSize)
+  }, [knownSize])
+
+  return (
+    <div
+      {...props}
+      style={{ ...props.style, '--item-height': `${size}px` } as React.CSSProperties}
+      className="empty:min-h-[var(--item-height)] empty:box-border"
+    />
+  )
+}
+
+function VirtualList(props: React.HTMLAttributes<HTMLDivElement>) {
+  return <div {...props} className="flex flex-col gap-1 divide-y divide-default/30 px-3 shrink-0 w-full" />
+}
+
+function VirtualHeader(props: VirtuosoContextProps<Track>) {
+  return <div {...props} className="h-[calc(theme(spacing.10)+theme(spacing.16)+theme(spacing.4))]" />
+}
+
+type TrackListContainerProps = {
+  ref: React.RefObject<HTMLDivElement | null>
+  children: React.ReactNode
+  className?: string
+}
+
+export function TrackListContainer({ ref, children, className }: TrackListContainerProps) {
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        'pt-[calc(theme(spacing.10)+theme(spacing.2))] overflow-auto w-full flex flex-col relative h-full',
+        className,
+      )}>
+      {children}
+    </div>
+  )
+}
+
+export { VirtualList as TrackList, ControlsContainer as TrackListControlsContainer, ListItem as TrackListItem }
+
+export function useTrackSelection() {
+  return useSelection<Track>((a, b) => a === b) // compare by reference
+}
+
+// Virtuoso's resize observer can throw this error, which is caught by DnD and aborts dragging.
+window.addEventListener('error', evt => {
+  if (
+    evt.message === 'ResizeObserver loop completed with undelivered notifications.' ||
+    evt.message === 'ResizeObserver loop limit exceeded'
+  ) {
+    evt.stopImmediatePropagation()
+  }
+})
