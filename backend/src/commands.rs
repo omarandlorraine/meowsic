@@ -1,4 +1,4 @@
-use crate::tracks::Track;
+use crate::tracks::{Album, Track};
 use crate::{AppState, Error};
 use std::path::PathBuf;
 use tauri::State;
@@ -128,6 +128,11 @@ pub async fn db_reorder_playlist_track(
         .db
         .reorder_playlist_track(name, hash, src, dst)
         .await?)
+}
+
+#[tauri::command]
+pub async fn db_get_albums(state: State<AppState, '_>) -> Result<Vec<Album>, Error> {
+    Ok(state.db.get_albums().await?)
 }
 
 #[tauri::command]

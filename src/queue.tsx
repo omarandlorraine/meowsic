@@ -1,8 +1,10 @@
 import { Button } from '@heroui/react'
-import { usePlayer } from '@/player'
 import { Trash2Icon } from 'lucide-react'
+import { reorder } from '@/utils'
+import { usePlayer } from '@/player'
 import { SelectAllControls } from '@/components'
 import { ControlsContainer, List, ListItem, useTrackSelection } from '@/tracks/components'
+import type { DropResult } from '@hello-pangea/dnd'
 
 export function QueueScreen() {
   const player = usePlayer()
@@ -37,6 +39,20 @@ export function QueueScreen() {
     selection.clear()
   }
 
+  const onDragEnd = async (result: DropResult) => {
+    if (!result.destination) return
+
+    const src = result.source.index
+    const dst = result.destination.index
+    if (src === dst) return
+
+    await player.setQueue(reorder(player.queue, src, dst))
+
+    if (src === player.currentIndex) await player.setCurrent(dst)
+    else if (src < dst) await player.setCurrent(player.currentIndex - 1)
+    else if (src > dst) await player.setCurrent(player.currentIndex + 1)
+  }
+
   return (
     <div className="flex flex-col size-full relative">
       <ControlsContainer>
@@ -53,8 +69,8 @@ export function QueueScreen() {
         </Button>
       </ControlsContainer>
 
-      <List data={player.queue}>
-        {(item, index) => (
+      <List data={player.queue} onDragEnd={onDragEnd}>
+        {(item, index, draggableProps) => (
           <ListItem
             key={item.hash}
             index={index}
@@ -62,6 +78,7 @@ export function QueueScreen() {
             isSelected={selection.isSelected(item)}
             isPlaying={player.current?.hash === item.hash}
             onToggleSelect={selection.toggle}
+            draggableProps={draggableProps}
             onPlay={async () => {
               await player.goto(index)
               await player.play()

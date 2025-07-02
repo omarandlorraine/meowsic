@@ -1,5 +1,5 @@
 use crate::tracks;
-use crate::tracks::Track;
+use crate::tracks::{Album, Track};
 use anyhow::Result;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Pool, QueryBuilder, Sqlite};
@@ -311,6 +311,20 @@ impl Db {
         tx.commit().await?;
 
         Ok(())
+    }
+
+    pub async fn get_albums(&self) -> Result<Vec<Album>> {
+        let albums: Vec<Album> = sqlx::query_as(
+            "SELECT album AS name, MIN(cover) AS cover
+            FROM tracks
+            WHERE album IS NOT NULL
+            GROUP BY album
+            ORDER BY album",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(albums)
     }
 
     pub async fn get_dirs(&self) -> Result<Vec<String>> {

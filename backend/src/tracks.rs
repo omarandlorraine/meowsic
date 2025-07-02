@@ -166,25 +166,8 @@ impl From<TrackRow> for Track {
     }
 }
 
-// pub fn scan(dirs: &[impl AsRef<Path>], mut tracks: Vec<Track>) -> Result<Vec<Track>> {
-//     let dirs = dirs.iter().map(|x| x.as_ref()).collect::<Vec<_>>();
-//     let mut subdirs = vec![];
-
-//     for dir in dirs {
-//         for entry in fs::read_dir(dir)? {
-//             let path = entry?.path();
-
-//             if path.is_file() {
-//                 tracks.push(Track::new(path)?);
-//             } else if path.is_dir() {
-//                 subdirs.push(path);
-//             }
-//         }
-//     }
-
-//     if subdirs.is_empty() {
-//         Ok(tracks)
-//     } else {
-//         scan(&subdirs, tracks)
-//     }
-// }
+#[derive(sqlx::FromRow, Debug, Clone, Serialize)]
+pub struct Album {
+    pub name: String,
+    pub cover: Option<String>,
+}

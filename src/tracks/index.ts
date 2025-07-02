@@ -17,8 +17,14 @@ export type Track = {
   position?: number | null
 }
 
+export type Album = { name: string; cover?: string | null }
+
 export async function getTracks() {
   return await invoke<Track[]>('db_get_tracks')
+}
+
+export async function getAlbums() {
+  return await invoke<Album[]>('db_get_albums')
 }
 
 export function normalizeMeta(track?: Track | null) {

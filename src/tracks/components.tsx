@@ -34,6 +34,7 @@ import { SearchBar, SelectAllControls } from '@/components'
 import { PlaylistEditorModal } from '@/playlists/components'
 import type { ItemProps as VirtuosoItemProps, ContextProp as VirtuosoContextProps } from 'react-virtuoso'
 import type { DraggableProvided, DraggableStateSnapshot, DropResult, DraggableRubric } from '@hello-pangea/dnd'
+import type { LucideIcon } from 'lucide-react'
 import type { Track } from '@/tracks'
 
 export function TracksScreen() {
@@ -214,14 +215,15 @@ export const ListItem = memo(
 
     return (
       <div
+        // TODO: a separate drag handle ?
         ref={draggableProps?.provided.innerRef}
         {...draggableProps?.provided.draggableProps}
         {...draggableProps?.provided.dragHandleProps}
         style={draggableProps?.provided.draggableProps.style}
         className={cn(
-          'flex items-center gap-3 p-3',
+          'flex items-center gap-3 p-3 !cursor-default',
           draggableProps?.snapshot.isDragging &&
-            'bg-secondary-50/25 border-secondary/10 border saturate-125 backdrop-blur-lg rounded-small',
+            'bg-secondary-50/25 border-secondary/10 border saturate-125 backdrop-blur-lg rounded-small cursor-grabbing',
         )}>
         <Checkbox
           color="success"
@@ -275,15 +277,15 @@ export const ListItem = memo(
     prev.draggableProps === next.draggableProps,
 )
 
-type CoverProps = { url?: string | null; className?: string }
+type CoverProps = { url?: string | null; className?: string; placeholder?: LucideIcon | (() => React.ReactNode) }
 
-export function Cover({ url, className }: CoverProps) {
+export function Cover({ url, className, placeholder: Placeholder = MusicIcon }: CoverProps) {
   return (
     <div className={cn('rounded-small overflow-hidden', className)}>
       {url ? (
         <Image
           isBlurred
-          radius="sm"
+          radius="none"
           width="100%"
           height="100%"
           loading="lazy"
@@ -291,16 +293,10 @@ export function Cover({ url, className }: CoverProps) {
           classNames={{ wrapper: 'size-full', img: 'size-full object-contain' }}
         />
       ) : (
-        <CoverPlaceholder />
+        <div className="size-full grid place-items-center bg-radial from-secondary-50/75 to-default-50/25">
+          <Placeholder className="size-1/3 text-secondary-900 opacity-50" />
+        </div>
       )}
-    </div>
-  )
-}
-
-export function CoverPlaceholder() {
-  return (
-    <div className="size-full grid place-items-center bg-radial from-secondary-50/75 to-default-50/25">
-      <MusicIcon className="size-1/3 text-secondary-900 opacity-50" />
     </div>
   )
 }

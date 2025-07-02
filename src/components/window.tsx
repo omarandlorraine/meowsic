@@ -50,8 +50,8 @@ export function Window() {
           <hr className="border-default/30 mx-2" />
 
           <NavLink url="/tracks" title="Tracks" icon={MusicIcon} />
-          <NavLink url="/artists" title="Artists" icon={UserRoundIcon} />
           <NavLink url="/albums" title="Albums" icon={Disc3Icon} />
+          <NavLink url="/artists" title="Artists" icon={UserRoundIcon} />
 
           <NavLink url="/settings" title="Settings" icon={SettingsIcon} className="mt-auto" />
         </div>
