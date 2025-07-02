@@ -14,6 +14,7 @@ export type Track = {
   albumArtist?: string | null
   date?: string | null
   genre?: string | null
+  position?: number | null
 }
 
 export async function getTracks() {

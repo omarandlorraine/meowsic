@@ -28,3 +28,7 @@ export async function addPlaylistTracks(name: string, tracks: Track[]) {
 export async function removePlaylistTracks(name: string, tracks?: Track[] | null) {
   return await invoke('db_remove_playlist_tracks', { name, hashes: tracks?.map(t => t.hash) })
 }
+
+export async function reorderPlaylistTrack(name: string, track: Track, src: number, dst: number) {
+  return await invoke('db_reorder_playlist_track', { name, hash: track.hash, src, dst })
+}

@@ -128,7 +128,8 @@ impl Db {
                 t.album,
                 t.album_artist,
                 t.date,
-                t.genre
+                t.genre,
+                pt.position
             FROM tracks AS t
             JOIN playlist_tracks AS pt ON pt.track_hash = t.hash
             WHERE pt.playlist_name = $1
@@ -154,10 +155,13 @@ impl Db {
                 return Ok(());
             }
 
+            let mut tx = self.pool.begin().await?;
+            let name = name.as_ref();
+
             let mut qb: QueryBuilder<Sqlite> =
                 QueryBuilder::new("DELETE FROM playlist_tracks WHERE playlist_name = ");
 
-            qb.push_bind(name.as_ref());
+            qb.push_bind(name);
             qb.push(" AND track_hash IN (");
             let mut separated = qb.separated(", ");
 
@@ -166,7 +170,27 @@ impl Db {
             }
 
             qb.push(")");
-            qb.build().execute(&self.pool).await?;
+            qb.build().execute(&mut *tx).await?;
+
+            sqlx::query(
+                "
+                WITH ordered AS (
+                    SELECT track_hash, ROW_NUMBER() OVER (ORDER BY position) - 1 AS new_pos
+                    FROM playlist_tracks
+                    WHERE playlist_name = $1
+                )
+                UPDATE playlist_tracks
+                SET position = (
+                    SELECT new_pos FROM ordered WHERE ordered.track_hash = playlist_tracks.track_hash
+                )
+                WHERE playlist_name = $1
+                ",
+            )
+            .bind(name)
+            .execute(&mut *tx)
+            .await?;
+
+            tx.commit().await?;
         } else {
             sqlx::query("DELETE FROM playlist_tracks WHERE playlist_name = $1")
                 .bind(name.as_ref())
@@ -187,11 +211,12 @@ impl Db {
         }
 
         let mut tx = self.pool.begin().await?;
+        let name = name.as_ref();
 
         let max_pos: i64 = sqlx::query_scalar(
             "SELECT COALESCE(MAX(position), -1) FROM playlist_tracks WHERE playlist_name = $1",
         )
-        .bind(name.as_ref())
+        .bind(name)
         .fetch_one(&mut *tx)
         .await?;
 
@@ -199,7 +224,7 @@ impl Db {
 
         let existing: Vec<String> =
             sqlx::query_scalar("SELECT track_hash FROM playlist_tracks WHERE playlist_name = $1")
-                .bind(name.as_ref())
+                .bind(name)
                 .fetch_all(&mut *tx)
                 .await?;
 
@@ -221,10 +246,7 @@ impl Db {
             QueryBuilder::new("INSERT INTO playlist_tracks (playlist_name, track_hash, position) ");
 
         qb.push_values(filtered.into_iter().take(32000), |mut b, hash| {
-            b.push_bind(name.as_ref())
-                .push_bind(hash)
-                .push_bind(max_pos);
-
+            b.push_bind(name).push_bind(hash).push_bind(max_pos);
             max_pos += 1;
         });
 
@@ -234,52 +256,62 @@ impl Db {
         Ok(())
     }
 
-    //     pub async fn remove_playlist_tracks_sorted(
-    //     &self,
-    //     name: &str,
-    //     hashes: &[impl AsRef<str>],
-    // ) -> Result<()> {
-    //     let name = name.as_ref();
-    //     let hashes = hashes.iter().map(|h| h.as_ref()).collect::<Vec<_>>() ;
-    //     if hashes.is_empty() {
-    //         return Ok(());
-    //     }
+    pub async fn reorder_playlist_track(
+        &self,
+        name: impl AsRef<str>,
+        hash: impl AsRef<str>,
+        src: i64,
+        dst: i64,
+    ) -> Result<()> {
+        let name = name.as_ref();
 
-    //     let mut tx = self.pool.begin().await?;
+        let query = if dst < src {
+            sqlx::query(
+                "
+                UPDATE playlist_tracks 
+                SET position = position + 1
+                WHERE playlist_name = $1 AND position >= $2 AND position < $3
+                ",
+            )
+            .bind(name)
+            .bind(dst)
+            .bind(src)
+        } else if dst > src {
+            sqlx::query(
+                "
+                UPDATE playlist_tracks
+                SET position = position - 1
+                WHERE playlist_name = $1 AND position > $2 AND position <= $3
+                ",
+            )
+            .bind(name)
+            .bind(src)
+            .bind(dst)
+        } else {
+            return Ok(());
+        };
 
-    //     // 1) Remove specified tracks
-    //     let mut del_qb = QueryBuilder::new("DELETE FROM playlist_tracks WHERE playlist_name = ")
-    //         .push_bind(name)
-    //         .push(" AND track_hash IN (");
-    //     let mut sep = del_qb.separated(", ");
-    //     for hash in &hashes {
-    //         sep.push_bind(hash);
-    //     }
-    //     del_qb.push(")");
-    //     del_qb.build().execute(&mut *tx).await?;
+        let mut tx = self.pool.begin().await?;
 
-    //     // 2) Normalize positions: reassign positions sequentially
-    //     sqlx::query(
-    //         r#"
-    //         WITH ordered AS (
-    //           SELECT track_hash, ROW_NUMBER() OVER (ORDER BY position) - 1 AS new_pos
-    //           FROM playlist_tracks
-    //           WHERE playlist_name = ?
-    //         )
-    //         UPDATE playlist_tracks
-    //         SET position = (
-    //           SELECT new_pos FROM ordered WHERE ordered.track_hash = playlist_tracks.track_hash
-    //         )
-    //         WHERE playlist_name = ?
-    //         "#
-    //     )
-    //     .bind(name)
-    //     .bind(name)
-    //     .execute(&mut *tx).await?;
+        query.execute(&mut *tx).await?;
 
-    //     tx.commit().await?;
-    //     Ok(())
-    // }
+        sqlx::query(
+            "
+            UPDATE playlist_tracks
+            SET position = $1
+            WHERE playlist_name = $2 AND track_hash = $3
+            ",
+        )
+        .bind(dst)
+        .bind(name)
+        .bind(hash.as_ref())
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+
+        Ok(())
+    }
 
     pub async fn get_dirs(&self) -> Result<Vec<String>> {
         let paths: Vec<String> = sqlx::query_scalar("SELECT path FROM dirs")
@@ -363,4 +395,6 @@ pub struct TrackRow {
     pub album_artist: Option<String>,
     pub date: Option<String>,
     pub genre: Option<String>,
+    #[sqlx(default)]
+    pub position: Option<i64>,
 }

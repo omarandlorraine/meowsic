@@ -126,7 +126,7 @@ export function TracksScreen() {
       </ControlsContainer>
 
       <List data={tracks}>
-        {(item, index) => (
+        {(item, index, draggableProps) => (
           <ListItem
             key={item.hash}
             index={index}
@@ -135,6 +135,7 @@ export function TracksScreen() {
             isSelected={selection.isSelected(item)}
             isPlaying={player.current?.hash === item.hash}
             onToggleSelect={selection.toggle}
+            draggableProps={draggableProps}
           />
         )}
       </List>
@@ -162,13 +163,13 @@ type ListProps = {
   children: (item: Track, index: number, draggableProps: DraggableProps) => React.ReactNode
 }
 
-export function List({ data, children, onDragEnd = () => {} }: ListProps) {
+export function List({ data, children, onDragEnd }: ListProps) {
   const renderClone = (provided: DraggableProvided, snapshot: DraggableStateSnapshot, rubric: DraggableRubric) => (
     <ListItem data={data[rubric.source.index]} draggableProps={{ provided, snapshot }} />
   )
 
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
+    <DragDropContext onDragEnd={onDragEnd ?? (() => {})}>
       <Droppable mode="virtual" droppableId="droppable" renderClone={renderClone}>
         {provided => {
           const ref = (el: Window | HTMLElement | null) => provided.innerRef(el as HTMLElement)
@@ -182,7 +183,7 @@ export function List({ data, children, onDragEnd = () => {} }: ListProps) {
               components={{ Item: VirtualItem, List: VirtualList, Header: VirtualHeader }}
               itemContent={(index, item) => {
                 return (
-                  <Draggable draggableId={item.hash} index={index} key={item.hash}>
+                  <Draggable draggableId={item.hash} index={index} key={item.hash} isDragDisabled={!onDragEnd}>
                     {(provided, snapshot) => children(item, index, { provided, snapshot })}
                   </Draggable>
                 )

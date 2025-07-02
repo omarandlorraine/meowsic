@@ -117,6 +117,20 @@ pub async fn db_remove_playlist_tracks(
 }
 
 #[tauri::command]
+pub async fn db_reorder_playlist_track(
+    state: State<AppState, '_>,
+    name: String,
+    hash: String,
+    src: i64,
+    dst: i64,
+) -> Result<(), Error> {
+    Ok(state
+        .db
+        .reorder_playlist_track(name, hash, src, dst)
+        .await?)
+}
+
+#[tauri::command]
 pub async fn db_scan_dirs(state: State<AppState, '_>) -> Result<(), Error> {
     Ok(state.db.scan_dirs(&state.db.get_dirs().await?).await?)
 }

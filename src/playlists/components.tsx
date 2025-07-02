@@ -12,6 +12,7 @@ import {
   removePlaylist,
   removePlaylistTracks,
   renamePlaylist,
+  reorderPlaylistTrack,
 } from '@/playlists'
 import { SearchBar, SelectAllControls } from '@/components'
 import { useTrackSelection, ControlsContainer, ListItem, List } from '@/tracks/components'
@@ -37,11 +38,15 @@ export function PlaylistScreen() {
 
   useEffect(() => setTracks(queryPlaylistTracks.data ?? []), [queryPlaylistTracks.data])
 
-  const onDragEnd = (result: DropResult) => {
-    if (!result.destination) return
-    if (result.source.index === result.destination.index) return
+  const onDragEnd = async (result: DropResult) => {
+    if (!params.name || !result.destination) return
 
-    setTracks(state => reorder(state, result.source.index, result.destination!.index))
+    const src = result.source.index
+    const dst = result.destination.index
+    if (src === dst) return
+
+    setTracks(state => reorder(state, src, dst))
+    await reorderPlaylistTrack(params.name, tracks[src], src, dst)
   }
 
   const onPlay = async (data: Track | Track[]) => {

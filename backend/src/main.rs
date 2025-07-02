@@ -54,6 +54,7 @@ async fn main() -> Result<()> {
             commands::db_get_playlist_tracks,
             commands::db_add_playlist_tracks,
             commands::db_remove_playlist_tracks,
+            commands::db_reorder_playlist_track,
             commands::db_scan_dirs,
             commands::db_get_dirs,
             commands::db_set_dirs,

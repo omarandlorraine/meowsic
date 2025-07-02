@@ -2,6 +2,7 @@ use crate::db::TrackRow;
 use crate::utils;
 use anyhow::{Context, Result};
 use serde::Serialize;
+use serde_with::skip_serializing_none;
 use std::fmt::Debug;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -12,6 +13,7 @@ use symphonia::core::probe::Hint;
 use symphonia::default::get_probe;
 use walkdir::WalkDir;
 
+#[skip_serializing_none]
 #[derive(Debug, Default, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Track {
@@ -27,6 +29,7 @@ pub struct Track {
     pub album_artist: Option<String>,
     pub date: Option<String>,
     pub genre: Option<String>,
+    pub position: Option<u64>,
 }
 
 impl Track {
@@ -158,6 +161,7 @@ impl From<TrackRow> for Track {
             album_artist: row.album_artist,
             date: row.date,
             genre: row.genre,
+            position: row.position.and_then(|x| x.try_into().ok()),
         }
     }
 }
