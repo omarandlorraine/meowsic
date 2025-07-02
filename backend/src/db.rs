@@ -414,6 +414,22 @@ impl Db {
                 FOREIGN KEY (playlist_name) REFERENCES playlists(name)
                     ON DELETE CASCADE ON UPDATE CASCADE
             );
+
+            CREATE TABLE IF NOT EXISTS moods (
+                name    TEXT    PRIMARY KEY,
+                icon    TEXT    NOT NULL,
+                color   TEXT    NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS mood_tracks (
+                mood_name       TEXT        NOT NULL,
+                track_hash      TEXT        NOT NULL,
+                rank            INTEGER     NOT NULL,
+
+                PRIMARY KEY (mood_name, track_hash),
+                FOREIGN KEY (mood_name) REFERENCES moods(name)
+                    ON DELETE CASCADE ON UPDATE CASCADE
+            );
             ",
         )
         .execute(&self.pool)

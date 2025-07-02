@@ -1,6 +1,6 @@
 import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Card, CardFooter } from '@heroui/react'
+import { Card as ExternalCard, CardFooter } from '@heroui/react'
 import { UserRoundIcon } from 'lucide-react'
 import { getArtists } from '@/tracks'
 import { Cover } from '@/tracks/components'
@@ -11,26 +11,42 @@ export function ArtistsScreen() {
   return (
     <div className="pt-[calc(theme(spacing.10))] overflow-auto w-full flex flex-col h-full gap-2">
       <div className="grid grid-cols-8 p-3 shrink-0 w-full gap-0.5">
-        {query.isSuccess &&
-          query.data.map(item => (
-            <Card
-              as={Link}
-              key={item}
-              isFooterBlurred
-              radius="none"
-              shadow="none"
-              to={`/tracks?artist=${item}`}
-              className="aspect-square bg-transparent group">
-              <Cover className="size-full rounded-none" placeholder={UserRoundIcon} />
-
-              <CardFooter
-                className="absolute bg-background/60 bottom-0 z-10 py-2 px-3
-                max-h-10 group-hover:max-h-full transition-[max-height]">
-                <div className="text-small line-clamp-1 group-hover:line-clamp-none">{item}</div>
-              </CardFooter>
-            </Card>
-          ))}
+        {query.isSuccess && query.data.map(item => <Card key={item} data={item} />)}
       </div>
     </div>
   )
+}
+
+type CardProps = { data: string }
+
+function Card({ data }: CardProps) {
+  const queryCover = useQuery({ queryKey: ['artist-cover', data], queryFn: () => getArtistCoverUrl(data), retry: 1 })
+
+  return (
+    <ExternalCard
+      as={Link}
+      isFooterBlurred
+      radius="none"
+      shadow="none"
+      to={`/tracks?artist=${data}`}
+      className="aspect-square bg-transparent group">
+      <Cover className="size-full rounded-none" external url={queryCover.data} placeholder={UserRoundIcon} />
+
+      <CardFooter className="absolute bg-background/60 bottom-0 z-10 py-2 px-3 max-h-10 group-hover:max-h-full transition-[max-height]">
+        <div className="text-small line-clamp-1 group-hover:line-clamp-none">{data}</div>
+      </CardFooter>
+    </ExternalCard>
+  )
+}
+
+export async function getArtistCoverUrl(_name: string) {
+  // TODO: for free
+  // const titles = name.replaceAll(' ', '_').replaceAll(', ', '|')
+  // const res = await fetch(
+  //   `https://en.wikipedia.org/w/api.php?action=query&titles=${titles}&prop=pageimages&pithumbsize=500&format=json&origin=*`,
+  // )
+  // const data = await res.json()
+  // const page: any = Object.values(data.query.pages)[0]
+  // return page?.thumbnail?.source
+  return null
 }

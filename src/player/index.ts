@@ -43,8 +43,8 @@ export async function goto(index: number) {
   if (!state.isPaused) invalidateInterval(state.interval)
 
   await invoke('player_goto', { index })
-
   const interval = state.isPaused ? null : createInterval()
+
   store.setState({ current: index, elapsed: 0, interval })
 }
 
@@ -53,8 +53,8 @@ export async function next() {
   if (!state.isPaused) invalidateInterval(state.interval)
 
   await invoke('player_next')
-
   const interval = state.isPaused ? null : createInterval()
+
   store.setState(state => ({ current: state.current + 1, elapsed: 0, interval }))
 }
 

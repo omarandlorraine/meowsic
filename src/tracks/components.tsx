@@ -310,9 +310,14 @@ export const ListItem = memo(
     prev.draggableProps === next.draggableProps,
 )
 
-type CoverProps = { url?: string | null; className?: string; placeholder?: LucideIcon | (() => React.ReactNode) }
+type CoverProps = {
+  url?: string | null
+  className?: string
+  placeholder?: LucideIcon | (() => React.ReactNode)
+  external?: boolean
+}
 
-export function Cover({ url, className, placeholder: Placeholder = MusicIcon }: CoverProps) {
+export function Cover({ url, className, placeholder: Placeholder = MusicIcon, external }: CoverProps) {
   return (
     <div className={cn('rounded-small overflow-hidden', className)}>
       {url ? (
@@ -323,7 +328,7 @@ export function Cover({ url, className, placeholder: Placeholder = MusicIcon }: 
           width="100%"
           height="100%"
           loading="lazy"
-          src={getAssetUrl(url)}
+          src={external ? url : getAssetUrl(url)}
           classNames={{ wrapper: 'size-full', img: 'size-full object-contain' }}
         />
       ) : (

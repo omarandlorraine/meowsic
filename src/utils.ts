@@ -17,16 +17,20 @@ export function formatTime(value?: number | null): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
-type Store = { fontSize: number }
+type Store = { fontSize: number; isPlayerMaximized: boolean }
 
-export const uiStore = createStore<Store>(() => ({ fontSize: 16 }))
+export const store = createStore<Store>(() => ({ fontSize: 16, isPlayerMaximized: false }))
+
+export function setPlayerMaximized(isMaximized: boolean) {
+  store.setState({ isPlayerMaximized: isMaximized })
+}
 
 const observer = new ResizeObserver(entries => {
   for (const entry of entries) {
     const width = entry.contentRect.width
     const fontSize = width > 1920 ? 16 : 14
 
-    uiStore.setState({ fontSize })
+    store.setState({ fontSize })
   }
 })
 

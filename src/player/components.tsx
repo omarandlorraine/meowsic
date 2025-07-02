@@ -1,5 +1,6 @@
 import { useLayoutEffect, useState } from 'react'
-import { Button, Slider } from '@heroui/react'
+import { useStore } from 'zustand'
+import { Button, Image, Slider } from '@heroui/react'
 import {
   Disc3Icon,
   PauseIcon,
@@ -10,22 +11,27 @@ import {
   SkipForwardIcon,
   UserRoundIcon,
 } from 'lucide-react'
-import { formatTime } from '@/utils'
+import { formatTime, getAssetUrl, store } from '@/utils'
 import { usePlayer } from '@/player'
 import { normalizeMeta } from '@/tracks'
 import { Cover } from '@/tracks/components'
 
 export function Player() {
   const player = usePlayer()
-
+  const meta = normalizeMeta(player.current)
+  const isPlayerMaximized = useStore(store, state => state.isPlayerMaximized)
   const [progress, setProgress] = useState<number | number[]>(player.elapsed)
 
   useLayoutEffect(() => setProgress(player.elapsed), [player.elapsed])
 
-  const meta = normalizeMeta(player.current)
-
   return (
-    <div className="flex flex-col items-center justify-center h-full">
+    <div className="flex flex-col items-center justify-center h-full isolate">
+      {isPlayerMaximized && player.current?.cover && (
+        <div className="fixed -inset-10 -z-10 brightness-25 saturate-50 blur-2xl">
+          <Image removeWrapper src={getAssetUrl(player.current.cover)} className="size-full object-cover" />
+        </div>
+      )}
+
       <Cover url={player.current?.cover} className="size-80 mb-18" />
 
       <div className="flex items-center gap-2 w-4/5 p-3">
@@ -67,7 +73,7 @@ export function Player() {
       </div>
 
       <div className="flex w-full items-center justify-center gap-3">
-        <Button isIconOnly radius="full" variant="light">
+        <Button isIconOnly isDisabled radius="full" variant="light">
           <RepeatIcon className="text-lg" />
         </Button>
 
@@ -90,7 +96,7 @@ export function Player() {
           <SkipForwardIcon className="text-xl" />
         </Button>
 
-        <Button isIconOnly radius="full" variant="light">
+        <Button isIconOnly isDisabled radius="full" variant="light">
           <ShuffleIcon className="text-lg" />
         </Button>
       </div>
