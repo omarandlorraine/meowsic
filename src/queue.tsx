@@ -56,7 +56,12 @@ export function QueueScreen() {
   return (
     <div className="flex flex-col size-full relative">
       <ControlsContainer>
-        {selection.values.length > 0 && <SelectAllControls data={player.queue} selection={selection} />}
+        {selection.values.length > 0 && (
+          <>
+            <SelectAllControls data={player.queue} selection={selection} />
+            <div className="h-5 border-r border-default/30" />
+          </>
+        )}
 
         <Button
           radius="sm"

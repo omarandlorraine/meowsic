@@ -71,6 +71,7 @@ export function PlaylistScreen() {
         {selection.values.length > 0 ? (
           <>
             <SelectAllControls data={tracks} selection={selection} />
+            <div className="h-5 border-r border-default/30" />
 
             <Button radius="sm" variant="flat" color="danger" className="!text-foreground" onPress={onRemoveTracks}>
               <Trash2Icon className="text-lg" /> Remove Selected
@@ -115,7 +116,7 @@ export function PlaylistScreen() {
               <Trash2Icon className="text-medium" /> Remove
             </Button>
 
-            <SearchBar value="" onChange={() => {}} />
+            <SearchBar value="" onChange={() => {}} className="w-100 ml-auto" />
           </>
         )}
       </ControlsContainer>

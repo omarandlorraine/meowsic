@@ -8,8 +8,9 @@ import { Window } from '@/components/window'
 import { HomeScreen } from '@/components/home'
 import { TracksScreen } from '@/tracks/components'
 import { PlaylistsScreen, PlaylistScreen } from '@/playlists/components'
-import { AlbumsScreen } from '@/albums'
 import { QueueScreen } from '@/queue'
+import { AlbumsScreen } from '@/albums'
+import { ArtistsScreen } from '@/artists'
 import { SettingsScreen } from '@/settings'
 
 const router = createBrowserRouter([
@@ -23,7 +24,7 @@ const router = createBrowserRouter([
       { path: '/playlists', Component: PlaylistsScreen },
       { path: '/playlists/:name', Component: PlaylistScreen },
       { path: '/albums', Component: AlbumsScreen },
-      { path: '/artists', Component: HomeScreen },
+      { path: '/artists', Component: ArtistsScreen },
       { path: '/settings', Component: SettingsScreen },
     ],
   },

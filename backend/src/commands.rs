@@ -1,3 +1,4 @@
+use crate::db::GetTracksFilters;
 use crate::tracks::{Album, Track};
 use crate::{AppState, Error};
 use std::path::PathBuf;
@@ -59,8 +60,11 @@ pub fn player_set_volume(state: State<AppState, '_>, volume: f32) -> Result<(), 
 }
 
 #[tauri::command]
-pub async fn db_get_tracks(state: State<AppState, '_>) -> Result<Vec<Track>, Error> {
-    Ok(state.db.get_tracks().await?)
+pub async fn db_get_tracks(
+    state: State<AppState, '_>,
+    filters: GetTracksFilters,
+) -> Result<Vec<Track>, Error> {
+    Ok(state.db.get_tracks(&filters).await?)
 }
 
 #[tauri::command]
@@ -133,6 +137,11 @@ pub async fn db_reorder_playlist_track(
 #[tauri::command]
 pub async fn db_get_albums(state: State<AppState, '_>) -> Result<Vec<Album>, Error> {
     Ok(state.db.get_albums().await?)
+}
+
+#[tauri::command]
+pub async fn db_get_artists(state: State<AppState, '_>) -> Result<Vec<String>, Error> {
+    Ok(state.db.get_artists().await?)
 }
 
 #[tauri::command]

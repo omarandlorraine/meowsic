@@ -27,21 +27,13 @@ export const store = createStore<Store>(() => ({
 async function setQueue(queue: Track[]) {
   await invoke('player_set_queue', { queue: queue.map(t => t.path) })
 
-  // const state = store.getState()
-  // invalidateInterval(state.interval)
-
   store.setState({ queue })
-  // store.setState({ queue, current: 0, elapsed: 0, interval: null, isPaused: true })
 }
 
 async function setCurrent(current: number) {
   await invoke('player_set_current', { index: current })
 
-  // const state = store.getState()
-  // invalidateInterval(state.interval)
-
   store.setState({ current })
-  // store.setState({ current, elapsed: 0, interval: null, isPaused: true })
 }
 
 // ! TODO: handle paused cases, handle looping
@@ -71,8 +63,8 @@ export async function prev() {
   if (!state.isPaused) invalidateInterval(state.interval)
 
   await invoke('player_prev')
-
   const interval = state.isPaused ? null : createInterval()
+
   store.setState(state => ({ current: state.current - 1, elapsed: 0, interval }))
 }
 
@@ -81,8 +73,8 @@ export async function seek(elapsed: number) {
   if (!state.isPaused) invalidateInterval(state.interval)
 
   await invoke('player_seek', { elapsed })
-
   const interval = state.isPaused ? null : createInterval()
+
   store.setState({ elapsed, interval })
 }
 

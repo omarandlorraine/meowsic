@@ -1,6 +1,7 @@
 use crate::tracks;
 use crate::tracks::{Album, Track};
 use anyhow::Result;
+use serde::Deserialize;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Pool, QueryBuilder, Sqlite};
 use std::collections::HashSet;
@@ -24,11 +25,26 @@ impl Db {
         Ok(Self { pool })
     }
 
-    pub async fn get_tracks(&self) -> Result<Vec<Track>> {
-        let entries: Vec<TrackRow> = sqlx::query_as("SELECT * FROM tracks")
-            .fetch_all(&self.pool)
-            .await?;
+    pub async fn get_tracks(&self, filters: &GetTracksFilters) -> Result<Vec<Track>> {
+        let mut qb = QueryBuilder::new("SELECT * FROM tracks");
+        let mut is_first_filter = true;
 
+        if let Some(album) = &filters.album {
+            qb.push(if is_first_filter { " WHERE " } else { " AND " })
+                .push("album = ")
+                .push_bind(album);
+            is_first_filter = false;
+        }
+
+        if let Some(artist) = &filters.artist {
+            qb.push(if is_first_filter { " WHERE " } else { " AND " })
+                .push("artist = ")
+                .push_bind(artist);
+        }
+
+        qb.push(" ORDER BY name ASC");
+
+        let entries: Vec<TrackRow> = qb.build_query_as().fetch_all(&self.pool).await?;
         let tracks = entries.into_iter().map(Track::from).collect();
 
         // let multiplier = 10; // TEST large dataset -> upto 376832 tracks at 12x
@@ -73,7 +89,7 @@ impl Db {
     }
 
     pub async fn get_playlists(&self) -> Result<Vec<String>> {
-        let names: Vec<String> = sqlx::query_scalar("SELECT name FROM playlists")
+        let names: Vec<String> = sqlx::query_scalar("SELECT name FROM playlists ORDER BY name ASC")
             .fetch_all(&self.pool)
             .await?;
 
@@ -315,11 +331,13 @@ impl Db {
 
     pub async fn get_albums(&self) -> Result<Vec<Album>> {
         let albums: Vec<Album> = sqlx::query_as(
-            "SELECT album AS name, MIN(cover) AS cover
+            "
+            SELECT album AS name, MIN(cover) AS cover
             FROM tracks
             WHERE album IS NOT NULL
             GROUP BY album
-            ORDER BY album",
+            ORDER BY album ASC
+            ",
         )
         .fetch_all(&self.pool)
         .await?;
@@ -327,8 +345,18 @@ impl Db {
         Ok(albums)
     }
 
+    pub async fn get_artists(&self) -> Result<Vec<String>> {
+        let artists: Vec<String> = sqlx::query_scalar(
+            "SELECT artist FROM tracks WHERE artist IS NOT NULL GROUP BY artist ORDER BY artist ASC",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(artists)
+    }
+
     pub async fn get_dirs(&self) -> Result<Vec<String>> {
-        let paths: Vec<String> = sqlx::query_scalar("SELECT path FROM dirs")
+        let paths: Vec<String> = sqlx::query_scalar("SELECT path FROM dirs ORDER BY path ASC")
             .fetch_all(&self.pool)
             .await?;
 
@@ -411,4 +439,10 @@ pub struct TrackRow {
     pub genre: Option<String>,
     #[sqlx(default)]
     pub position: Option<i64>,
+}
+
+#[derive(Deserialize)]
+pub struct GetTracksFilters {
+    pub album: Option<String>,
+    pub artist: Option<String>,
 }

@@ -1,12 +1,12 @@
-import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
+import { useQuery } from '@tanstack/react-query'
 import { Card, CardFooter } from '@heroui/react'
-import { Disc3Icon } from 'lucide-react'
-import { getAlbums } from '@/tracks'
+import { UserRoundIcon } from 'lucide-react'
+import { getArtists } from '@/tracks'
 import { Cover } from '@/tracks/components'
 
-export function AlbumsScreen() {
-  const query = useQuery({ queryKey: ['albums'], queryFn: getAlbums })
+export function ArtistsScreen() {
+  const query = useQuery({ queryKey: ['artists'], queryFn: getArtists })
 
   return (
     <div className="pt-[calc(theme(spacing.10))] overflow-auto w-full flex flex-col h-full gap-2">
@@ -15,18 +15,18 @@ export function AlbumsScreen() {
           query.data.map(item => (
             <Card
               as={Link}
-              key={item.name}
+              key={item}
+              isFooterBlurred
               radius="none"
               shadow="none"
-              isFooterBlurred
-              to={`/tracks?album=${item.name}`}
+              to={`/tracks?artist=${item}`}
               className="aspect-square bg-transparent group">
-              <Cover className="size-full rounded-none" url={item.cover} placeholder={Disc3Icon} />
+              <Cover className="size-full rounded-none" placeholder={UserRoundIcon} />
 
               <CardFooter
                 className="absolute bg-background/60 bottom-0 z-10 py-2 px-3
                 max-h-10 group-hover:max-h-full transition-[max-height]">
-                <div className="text-small line-clamp-1 group-hover:line-clamp-none">{item.name}</div>
+                <div className="text-small line-clamp-1 group-hover:line-clamp-none">{item}</div>
               </CardFooter>
             </Card>
           ))}

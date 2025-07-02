@@ -1,16 +1,17 @@
 import { memo, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import {
   Button,
   Checkbox,
-  cn,
+  Chip,
   Dropdown,
   DropdownItem,
   DropdownMenu,
   DropdownSection,
   DropdownTrigger,
   Image,
+  cn,
   useDisclosure,
 } from '@heroui/react'
 import {
@@ -39,12 +40,14 @@ import type { Track } from '@/tracks'
 
 export function TracksScreen() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const { album, artist } = parseFilters(searchParams)
   const player = usePlayer()
 
-  const query = useQuery({ queryKey: ['tracks'], queryFn: getTracks })
-  const [tracks, setTracks] = useState(query.data ?? [])
-
-  useEffect(() => setTracks(query.data ?? []), [query.data])
+  const query = useQuery({
+    queryKey: ['tracks', album, artist],
+    queryFn: async () => await getTracks({ album, artist }),
+  })
 
   const onPlay = async (data: Track | Track[]) => {
     await player.setQueue(Array.isArray(data) ? data : [data])
@@ -64,7 +67,12 @@ export function TracksScreen() {
       <ControlsContainer>
         {selection.values.length > 0 ? (
           <>
-            {query.isSuccess && <SelectAllControls data={query.data} selection={selection} />}
+            {query.isSuccess && (
+              <>
+                <SelectAllControls data={query.data} selection={selection} />
+                <div className="h-5 border-r border-default/30" />
+              </>
+            )}
 
             <Button radius="sm" variant="flat" color="secondary" onPress={() => onPlay(selection.values)}>
               <PlayIcon className="text-lg" /> Play
@@ -114,6 +122,7 @@ export function TracksScreen() {
               radius="sm"
               variant="flat"
               color="secondary"
+              className="mr-auto"
               isDisabled={!query.isSuccess || !query.data.length}
               onPress={() => {
                 if (query.isSuccess && query.data.length > 0) onPlay(query.data)
@@ -121,12 +130,36 @@ export function TracksScreen() {
               <PlayIcon className="text-lg" /> Play All
             </Button>
 
-            <SearchBar value="" onChange={() => {}} />
+            {album && (
+              <Chip
+                variant="flat"
+                size="lg"
+                color="warning"
+                startContent={<Disc3Icon className="text-lg" />}
+                onClose={() => navigate('/tracks')}>
+                <div className="text-small px-2">{album}</div>
+              </Chip>
+            )}
+
+            {artist && (
+              <Chip
+                variant="flat"
+                size="lg"
+                color="warning"
+                startContent={<UserRoundIcon className="text-lg" />}
+                onClose={() => navigate('/tracks')}>
+                <div className="text-small px-2">{artist}</div>
+              </Chip>
+            )}
+
+            {(album || artist) && <div className="h-6 border-r border-default/30" />}
+
+            <SearchBar value="" onChange={() => {}} className="w-120" />
           </>
         )}
       </ControlsContainer>
 
-      <List data={tracks}>
+      <List data={query.data ?? []}>
         {(item, index, draggableProps) => (
           <ListItem
             key={item.hash}
@@ -286,6 +319,7 @@ export function Cover({ url, className, placeholder: Placeholder = MusicIcon }: 
         <Image
           isBlurred
           radius="none"
+          shadow="none"
           width="100%"
           height="100%"
           loading="lazy"
@@ -306,7 +340,7 @@ export function ControlsContainer({ className, ...props }: React.HTMLAttributes<
     <div
       {...props}
       className={cn(
-        'px-6 py-3 flex items-center gap-3 rounded-small absolute top-[calc(theme(spacing.10)+theme(spacing.2))] left-0 right-3',
+        'px-6 h-16 flex items-center gap-3 rounded-small absolute top-[calc(theme(spacing.10)+theme(spacing.2))] left-0 right-3',
         'bg-default-50/25 backdrop-blur-lg z-50 backdrop-saturate-125',
         className,
       )}
@@ -342,6 +376,10 @@ function VirtualHeader(props: VirtuosoContextProps<Track>) {
 
 export function useTrackSelection() {
   return useSelection<Track>((a, b) => a === b) // compare by reference
+}
+
+function parseFilters(params: URLSearchParams) {
+  return { album: params.get('album'), artist: params.get('artist') }
 }
 
 // Virtuoso's resize observer can throw this error, which is caught by DnD and aborts dragging.
