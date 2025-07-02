@@ -54,7 +54,7 @@ export function useSelection<T>(isEqual: (a: T, b: T) => boolean): UseSelection<
   return { values, set, isSelected, toggle, clear }
 }
 
-export function arraySwap<T>(items: T[], src: number, dst: number) {
+export function reorder<T>(items: T[], src: number, dst: number) {
   const res = Array.from(items)
   const [removed] = res.splice(src, 1)
 

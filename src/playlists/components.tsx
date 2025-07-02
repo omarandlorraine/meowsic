@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, Input, useDisclosure } from '@heroui/react'
 import { CheckIcon, MoveRightIcon, PlayIcon, PlusIcon, SquarePenIcon, Trash2Icon } from 'lucide-react'
-import { arraySwap } from '@/utils'
+import { reorder } from '@/utils'
 import { usePlayer } from '@/player'
 import {
   addPlaylist,
@@ -41,7 +41,7 @@ export function PlaylistScreen() {
     if (!result.destination) return
     if (result.source.index === result.destination.index) return
 
-    setTracks(state => arraySwap(state, result.source.index, result.destination!.index))
+    setTracks(state => reorder(state, result.source.index, result.destination!.index))
   }
 
   const onPlay = async (data: Track | Track[]) => {

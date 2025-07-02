@@ -3,6 +3,7 @@ use crate::tracks::Track;
 use anyhow::Result;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Pool, QueryBuilder, Sqlite};
+use std::collections::HashSet;
 use std::path::Path;
 
 pub struct Db {
@@ -72,11 +73,9 @@ impl Db {
     }
 
     pub async fn get_playlists(&self) -> Result<Vec<String>> {
-        let entries: Vec<(String,)> = sqlx::query_as("SELECT * FROM playlists")
+        let names: Vec<String> = sqlx::query_scalar("SELECT name FROM playlists")
             .fetch_all(&self.pool)
             .await?;
-
-        let names = entries.into_iter().map(|x| x.0).collect();
 
         Ok(names)
     }
@@ -133,6 +132,7 @@ impl Db {
             FROM tracks AS t
             JOIN playlist_tracks AS pt ON pt.track_hash = t.hash
             WHERE pt.playlist_name = $1
+            ORDER BY pt.position ASC
             ",
         )
         .bind(name.as_ref())
@@ -186,24 +186,105 @@ impl Db {
             return Ok(());
         }
 
-        let mut qb =
-            QueryBuilder::new("INSERT OR IGNORE INTO playlist_tracks (playlist_name, track_hash) ");
+        let mut tx = self.pool.begin().await?;
 
-        qb.push_values(hashes.into_iter().take(32000), |mut b, hash| {
-            b.push_bind(name.as_ref()).push_bind(hash.as_ref());
+        let max_pos: i64 = sqlx::query_scalar(
+            "SELECT COALESCE(MAX(position), -1) FROM playlist_tracks WHERE playlist_name = $1",
+        )
+        .bind(name.as_ref())
+        .fetch_one(&mut *tx)
+        .await?;
+
+        let mut max_pos = max_pos + 1;
+
+        let existing: Vec<String> =
+            sqlx::query_scalar("SELECT track_hash FROM playlist_tracks WHERE playlist_name = $1")
+                .bind(name.as_ref())
+                .fetch_all(&mut *tx)
+                .await?;
+
+        let existing: HashSet<String> = existing.into_iter().collect();
+
+        let filtered: Vec<&str> = hashes
+            .into_iter()
+            .map(|x| x.as_ref())
+            .filter(|&x| !existing.contains(x))
+            .collect();
+
+        if filtered.is_empty() {
+            tx.commit().await?;
+
+            return Ok(());
+        }
+
+        let mut qb =
+            QueryBuilder::new("INSERT INTO playlist_tracks (playlist_name, track_hash, position) ");
+
+        qb.push_values(filtered.into_iter().take(32000), |mut b, hash| {
+            b.push_bind(name.as_ref())
+                .push_bind(hash)
+                .push_bind(max_pos);
+
+            max_pos += 1;
         });
 
-        qb.build().execute(&self.pool).await?;
+        qb.build().execute(&mut *tx).await?;
+        tx.commit().await?;
 
         Ok(())
     }
 
+    //     pub async fn remove_playlist_tracks_sorted(
+    //     &self,
+    //     name: &str,
+    //     hashes: &[impl AsRef<str>],
+    // ) -> Result<()> {
+    //     let name = name.as_ref();
+    //     let hashes = hashes.iter().map(|h| h.as_ref()).collect::<Vec<_>>() ;
+    //     if hashes.is_empty() {
+    //         return Ok(());
+    //     }
+
+    //     let mut tx = self.pool.begin().await?;
+
+    //     // 1) Remove specified tracks
+    //     let mut del_qb = QueryBuilder::new("DELETE FROM playlist_tracks WHERE playlist_name = ")
+    //         .push_bind(name)
+    //         .push(" AND track_hash IN (");
+    //     let mut sep = del_qb.separated(", ");
+    //     for hash in &hashes {
+    //         sep.push_bind(hash);
+    //     }
+    //     del_qb.push(")");
+    //     del_qb.build().execute(&mut *tx).await?;
+
+    //     // 2) Normalize positions: reassign positions sequentially
+    //     sqlx::query(
+    //         r#"
+    //         WITH ordered AS (
+    //           SELECT track_hash, ROW_NUMBER() OVER (ORDER BY position) - 1 AS new_pos
+    //           FROM playlist_tracks
+    //           WHERE playlist_name = ?
+    //         )
+    //         UPDATE playlist_tracks
+    //         SET position = (
+    //           SELECT new_pos FROM ordered WHERE ordered.track_hash = playlist_tracks.track_hash
+    //         )
+    //         WHERE playlist_name = ?
+    //         "#
+    //     )
+    //     .bind(name)
+    //     .bind(name)
+    //     .execute(&mut *tx).await?;
+
+    //     tx.commit().await?;
+    //     Ok(())
+    // }
+
     pub async fn get_dirs(&self) -> Result<Vec<String>> {
-        let entries: Vec<(String,)> = sqlx::query_as("SELECT * FROM dirs")
+        let paths: Vec<String> = sqlx::query_scalar("SELECT path FROM dirs")
             .fetch_all(&self.pool)
             .await?;
-
-        let paths = entries.into_iter().map(|x| x.0).collect();
 
         Ok(paths)
     }
