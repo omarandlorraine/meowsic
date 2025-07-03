@@ -12,7 +12,8 @@ export function SearchBar({ value, onChange, className }: SearchBarProps) {
       placeholder="Search"
       value={value}
       onValueChange={onChange}
-      startContent={<SearchIcon className="text-lg flex-shrink-0 mr-1" />}
+      onClear={() => onChange('')}
+      startContent={<SearchIcon className="text-lg text-default-500 flex-shrink-0 mr-1" />}
       classNames={{
         base: className,
         input: 'bg-transparent placeholder:text-default-300',

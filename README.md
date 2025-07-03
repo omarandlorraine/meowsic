@@ -7,11 +7,12 @@ A beautiful, modern, cross-platform, offline music player
 - [ ] shuffle and repeat controls
 - [ ] mood ranking
 - [ ] HW keybinds
-- [ ] mini player
 - [ ] lyrics manager
 - [ ] assets manager
 - [ ] unsupported audio fallback
 - [ ] open with
-- [x] better import fonts
 - [ ] animations
 - [ ] logo
+- [x] search
+- [x] better import fonts
+- [x] mini player

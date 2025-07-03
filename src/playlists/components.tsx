@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useDebounce } from 'use-debounce'
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, Input, useDisclosure } from '@heroui/react'
 import { CheckIcon, MoveRightIcon, PlayIcon, PlusIcon, SquarePenIcon, Trash2Icon } from 'lucide-react'
-import { reorder } from '@/utils'
+import { reorder, setMiniPlayerVisibility } from '@/utils'
 import { usePlayer } from '@/player'
 import {
   addPlaylist,
@@ -14,10 +15,12 @@ import {
   renamePlaylist,
   reorderPlaylistTrack,
 } from '@/playlists'
+import { createSearchIndex, type Track } from '@/tracks'
 import { SearchBar, SelectAllControls } from '@/components'
 import { useTrackSelection, ControlsContainer, ListItem, List } from '@/tracks/components'
 import type { DropResult } from '@hello-pangea/dnd'
-import type { Track } from '@/tracks'
+
+const searchIndex = createSearchIndex()
 
 export function PlaylistScreen() {
   const params = useParams<{ name: string }>()
@@ -34,9 +37,29 @@ export function PlaylistScreen() {
     enabled: !!params.name,
   })
 
-  const [tracks, setTracks] = useState(queryPlaylistTracks.data ?? [])
+  const map = new Map(queryPlaylistTracks.data?.map(t => [t.hash, t]) ?? [])
+  const [filtered, setFiltered] = useState(queryPlaylistTracks.data ?? [])
 
-  useEffect(() => setTracks(queryPlaylistTracks.data ?? []), [queryPlaylistTracks.data])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearchQuery] = useDebounce(searchQuery, 500)
+
+  useEffect(() => {
+    if (!debouncedSearchQuery.trim()) return setFiltered(queryPlaylistTracks.data ?? [])
+
+    const data = searchIndex
+      .search(debouncedSearchQuery)
+      .map(it => map.get(it.id))
+      .filter(Boolean) as Track[]
+
+    console.log(map)
+
+    setFiltered(data)
+  }, [queryPlaylistTracks.data, debouncedSearchQuery])
+
+  useEffect(() => {
+    searchIndex.removeAll()
+    searchIndex.addAll(queryPlaylistTracks.data ?? [])
+  }, [queryPlaylistTracks.data])
 
   const onDragEnd = async (result: DropResult) => {
     if (!params.name || !result.destination) return
@@ -45,15 +68,16 @@ export function PlaylistScreen() {
     const dst = result.destination.index
     if (src === dst) return
 
-    setTracks(state => reorder(state, src, dst))
-    await reorderPlaylistTrack(params.name, tracks[src], src, dst)
+    setFiltered(state => reorder(state, src, dst))
+    await reorderPlaylistTrack(params.name, filtered[src], src, dst)
   }
 
   const onPlay = async (data: Track | Track[]) => {
     await player.setQueue(Array.isArray(data) ? data : [data])
     await player.goto(0)
     await player.play()
-    navigate('/')
+
+    setMiniPlayerVisibility(true)
   }
 
   const onRemoveTracks = async () => {
@@ -70,7 +94,7 @@ export function PlaylistScreen() {
       <ControlsContainer>
         {selection.values.length > 0 ? (
           <>
-            <SelectAllControls data={tracks} selection={selection} />
+            <SelectAllControls data={filtered} selection={selection} />
             <div className="h-5 border-r border-default/30" />
 
             <Button radius="sm" variant="flat" color="danger" className="!text-foreground" onPress={onRemoveTracks}>
@@ -83,9 +107,9 @@ export function PlaylistScreen() {
               radius="sm"
               variant="flat"
               color="secondary"
-              isDisabled={!tracks.length}
+              isDisabled={!filtered.length}
               onPress={() => {
-                if (tracks.length > 0) onPlay(tracks)
+                if (filtered.length > 0) onPlay(filtered)
               }}>
               <PlayIcon className="text-lg" /> Play All
             </Button>
@@ -116,12 +140,12 @@ export function PlaylistScreen() {
               <Trash2Icon className="text-medium" /> Remove
             </Button>
 
-            <SearchBar value="" onChange={() => {}} className="w-100 ml-auto" />
+            <SearchBar value={searchQuery} onChange={setSearchQuery} className="w-120 ml-auto" />
           </>
         )}
       </ControlsContainer>
 
-      <List data={tracks} onDragEnd={onDragEnd}>
+      <List data={filtered} onDragEnd={onDragEnd} isDragDisabled={filtered.length !== queryPlaylistTracks.data?.length}>
         {(item, index, draggableProps) => (
           <ListItem
             key={item.hash}

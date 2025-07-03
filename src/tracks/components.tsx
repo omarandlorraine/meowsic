@@ -15,9 +15,9 @@ import {
   useDisclosure,
 } from '@heroui/react'
 import {
-  AudioLinesIcon,
   ClockIcon,
   Disc3Icon,
+  GripVerticalIcon,
   ListMusicIcon,
   ListVideoIcon,
   MusicIcon,
@@ -27,9 +27,10 @@ import {
 } from 'lucide-react'
 import { Virtuoso } from 'react-virtuoso'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
-import { formatTime, getAssetUrl, useSelection } from '@/utils'
+import { useDebounce } from 'use-debounce'
+import { formatTime, getAssetUrl, setMiniPlayerVisibility, useSelection } from '@/utils'
 import { usePlayer } from '@/player'
-import { getTracks, normalizeMeta } from '@/tracks'
+import { createSearchIndex, getTracks, normalizeMeta } from '@/tracks'
 import { addPlaylist, addPlaylistTracks, getPlaylists } from '@/playlists'
 import { SearchBar, SelectAllControls } from '@/components'
 import { PlaylistEditorModal } from '@/playlists/components'
@@ -37,6 +38,8 @@ import type { ItemProps as VirtuosoItemProps, ContextProp as VirtuosoContextProp
 import type { DraggableProvided, DraggableStateSnapshot, DropResult, DraggableRubric } from '@hello-pangea/dnd'
 import type { LucideIcon } from 'lucide-react'
 import type { Track } from '@/tracks'
+
+const searchIndex = createSearchIndex()
 
 export function TracksScreen() {
   const navigate = useNavigate()
@@ -49,11 +52,34 @@ export function TracksScreen() {
     queryFn: async () => await getTracks({ album, artist }),
   })
 
+  const map = new Map(query.data?.map(t => [t.hash, t]) ?? [])
+  const [filtered, setFiltered] = useState(query.data ?? [])
+
+  const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearchQuery] = useDebounce(searchQuery, 500)
+
+  useEffect(() => {
+    if (!debouncedSearchQuery.trim()) return setFiltered(query.data ?? [])
+
+    const data = searchIndex
+      .search(debouncedSearchQuery)
+      .map(it => map.get(it.id))
+      .filter(Boolean) as Track[]
+
+    setFiltered(data)
+  }, [query.data, debouncedSearchQuery])
+
+  useEffect(() => {
+    searchIndex.removeAll()
+    searchIndex.addAll(query.data ?? [])
+  }, [query.data])
+
   const onPlay = async (data: Track | Track[]) => {
     await player.setQueue(Array.isArray(data) ? data : [data])
     await player.goto(0)
     await player.play()
-    navigate('/')
+
+    setMiniPlayerVisibility(true)
   }
 
   const selection = useTrackSelection()
@@ -69,7 +95,7 @@ export function TracksScreen() {
           <>
             {query.isSuccess && (
               <>
-                <SelectAllControls data={query.data} selection={selection} />
+                <SelectAllControls data={filtered} selection={selection} />
                 <div className="h-5 border-r border-default/30" />
               </>
             )}
@@ -123,9 +149,9 @@ export function TracksScreen() {
               variant="flat"
               color="secondary"
               className="mr-auto"
-              isDisabled={!query.isSuccess || !query.data.length}
+              isDisabled={!filtered.length}
               onPress={() => {
-                if (query.isSuccess && query.data.length > 0) onPlay(query.data)
+                if (filtered.length > 0) onPlay(filtered)
               }}>
               <PlayIcon className="text-lg" /> Play All
             </Button>
@@ -154,12 +180,12 @@ export function TracksScreen() {
 
             {(album || artist) && <div className="h-6 border-r border-default/30" />}
 
-            <SearchBar value="" onChange={() => {}} className="w-120" />
+            <SearchBar value={searchQuery} onChange={setSearchQuery} className="w-120" />
           </>
         )}
       </ControlsContainer>
 
-      <List data={query.data ?? []}>
+      <List data={filtered}>
         {(item, index, draggableProps) => (
           <ListItem
             key={item.hash}
@@ -194,10 +220,11 @@ export function TracksScreen() {
 type ListProps = {
   data: Track[]
   onDragEnd?: (result: DropResult) => void
-  children: (item: Track, index: number, draggableProps: DraggableProps) => React.ReactNode
+  children: (item: Track, index: number, draggableProps?: DraggableProps) => React.ReactNode
+  isDragDisabled?: boolean
 }
 
-export function List({ data, children, onDragEnd }: ListProps) {
+export function List({ data, children, onDragEnd, isDragDisabled }: ListProps) {
   const renderClone = (provided: DraggableProvided, snapshot: DraggableStateSnapshot, rubric: DraggableRubric) => (
     <ListItem data={data[rubric.source.index]} draggableProps={{ provided, snapshot }} />
   )
@@ -216,8 +243,10 @@ export function List({ data, children, onDragEnd }: ListProps) {
               className="size-full shrink-0"
               components={{ Item: VirtualItem, List: VirtualList, Header: VirtualHeader }}
               itemContent={(index, item) => {
+                if (isDragDisabled || !onDragEnd) return children(item, index)
+
                 return (
-                  <Draggable draggableId={item.hash} index={index} key={item.hash} isDragDisabled={!onDragEnd}>
+                  <Draggable key={item.hash} index={index} draggableId={item.hash}>
                     {(provided, snapshot) => children(item, index, { provided, snapshot })}
                   </Draggable>
                 )
@@ -240,10 +269,11 @@ type ListItemProps = {
   onToggleSelect?: (data: Track, previouslySelected?: boolean) => void
   index?: number
   draggableProps?: DraggableProps
+  onShowDetails?: (data: Track) => void
 }
 
 export const ListItem = memo(
-  ({ data, isPlaying, isSelected, onPlay, onToggleSelect, draggableProps }: ListItemProps) => {
+  ({ data, isPlaying, isSelected, onPlay, onToggleSelect, draggableProps, onShowDetails }: ListItemProps) => {
     const meta = normalizeMeta(data)
 
     return (
@@ -268,18 +298,24 @@ export const ListItem = memo(
           }}
         />
 
-        <Button isIconOnly radius="full" variant="flat" isDisabled={!onPlay} onPress={() => onPlay?.(data)}>
+        <Button
+          isIconOnly
+          radius="full"
+          variant="flat"
+          isDisabled={!onPlay}
+          onPress={() => onPlay?.(data)}
+          color={isPlaying ? 'success' : 'default'}>
           <PlayIcon className="text-lg" />
         </Button>
 
-        <Cover url={data.cover} className="size-16 mx-3" />
+        <Cover
+          url={data.cover}
+          onClick={() => onShowDetails?.(data)}
+          className={cn('size-16 mx-3', onShowDetails && 'cursor-pointer')}
+        />
 
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            {isPlaying && <AudioLinesIcon className="text-lg text-secondary-600" />}
-
-            {meta.title}
-          </div>
+        <div className="flex flex-col gap-2 mr-auto">
+          <div className="flex items-center gap-2">{meta.title}</div>
 
           <div className="flex items-center gap-2">
             <div className="text-default-500 flex items-center gap-2 text-small">
@@ -299,6 +335,8 @@ export const ListItem = memo(
             )}
           </div>
         </div>
+
+        {draggableProps && <GripVerticalIcon className="text-lg text-default-300" />}
       </div>
     )
   },
@@ -315,9 +353,10 @@ type CoverProps = {
   className?: string
   placeholder?: LucideIcon | (() => React.ReactNode)
   external?: boolean
+  onClick?: () => void
 }
 
-export function Cover({ url, className, placeholder: Placeholder = MusicIcon, external }: CoverProps) {
+export function Cover({ url, className, placeholder: Placeholder = MusicIcon, external, onClick }: CoverProps) {
   return (
     <div className={cn('rounded-small overflow-hidden', className)}>
       {url ? (
@@ -328,6 +367,7 @@ export function Cover({ url, className, placeholder: Placeholder = MusicIcon, ex
           width="100%"
           height="100%"
           loading="lazy"
+          onClick={onClick}
           src={external ? url : getAssetUrl(url)}
           classNames={{ wrapper: 'size-full', img: 'size-full object-contain' }}
         />

@@ -1,22 +1,26 @@
 import { useLayoutEffect, useState } from 'react'
 import { useStore } from 'zustand'
-import { Button, Image, Slider } from '@heroui/react'
+import { Button, cn, Image, Slider } from '@heroui/react'
 import {
   Disc3Icon,
   PauseIcon,
+  PictureInPicture2Icon,
   PlayIcon,
   RepeatIcon,
   ShuffleIcon,
   SkipBackIcon,
   SkipForwardIcon,
   UserRoundIcon,
+  XIcon,
 } from 'lucide-react'
-import { formatTime, getAssetUrl, store } from '@/utils'
+import { formatTime, getAssetUrl, setMiniPlayerVisibility, store } from '@/utils'
 import { usePlayer } from '@/player'
 import { normalizeMeta } from '@/tracks'
 import { Cover } from '@/tracks/components'
 
-export function Player() {
+type PlayerProps = { mini?: boolean }
+
+export function Player({ mini }: PlayerProps) {
   const player = usePlayer()
   const meta = normalizeMeta(player.current)
   const isPlayerMaximized = useStore(store, state => state.isPlayerMaximized)
@@ -25,32 +29,56 @@ export function Player() {
   useLayoutEffect(() => setProgress(player.elapsed), [player.elapsed])
 
   return (
-    <div className="flex flex-col items-center justify-center h-full isolate">
+    <div className={cn('flex flex-col items-center justify-center h-full isolate', mini && 'pb-6 pt-3')}>
       {isPlayerMaximized && player.current?.cover && (
         <div className="fixed -inset-10 -z-10 brightness-25 saturate-50 blur-2xl">
           <Image removeWrapper src={getAssetUrl(player.current.cover)} className="size-full object-cover" />
         </div>
       )}
 
-      <Cover url={player.current?.cover} className="size-80 mb-18" />
+      {mini ? (
+        <div className="flex w-full px-8 gap-3">
+          <Cover url={player.current?.cover} className="size-40" />
 
-      <div className="flex items-center gap-2 w-4/5 p-3">
-        {meta.title && <div className="text-large mr-auto">{meta.title}</div>}
+          <div className="flex flex-col gap-2">
+            {meta.title && <div className="text-large mr-auto">{meta.title}</div>}
 
-        {meta.album && (
-          <div className="text-default-500 flex items-center gap-2 text-small">
-            <Disc3Icon /> {meta.album}
+            {meta.album && (
+              <div className="text-default-500 flex items-center gap-2 text-small">
+                <Disc3Icon /> {meta.album}
+              </div>
+            )}
+
+            {meta.artist && (
+              <div className="text-default-500 flex items-center gap-2 text-small">
+                <UserRoundIcon /> {meta.artist}
+              </div>
+            )}
           </div>
-        )}
+        </div>
+      ) : (
+        <>
+          <Cover url={player.current?.cover} className="size-80 mb-18" />
 
-        {meta.artist && (
-          <div className="text-default-500 flex items-center gap-2 text-small">
-            <UserRoundIcon /> {meta.artist}
+          <div className="flex items-center gap-2 w-4/5 p-3">
+            {meta.title && <div className="text-large mr-auto">{meta.title}</div>}
+
+            {meta.album && (
+              <div className="text-default-500 flex items-center gap-2 text-small">
+                <Disc3Icon /> {meta.album}
+              </div>
+            )}
+
+            {meta.artist && (
+              <div className="text-default-500 flex items-center gap-2 text-small">
+                <UserRoundIcon /> {meta.artist}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
 
-      <div className="flex flex-col w-4/5 mx-auto p-3 gap-3">
+      <div className={cn('flex flex-col mx-auto gap-3', mini ? 'w-full p-8' : 'w-4/5 p-3')}>
         <Slider
           size="sm"
           color="foreground"
@@ -100,6 +128,32 @@ export function Player() {
           <ShuffleIcon className="text-lg" />
         </Button>
       </div>
+    </div>
+  )
+}
+
+export function MiniPlayer() {
+  return (
+    <div
+      className="fixed w-160 flex flex-col bottom-8 right-8 border border-default/30
+      bg-background/60 backdrop-blur-lg z-50 rounded-small shadow-small">
+      <div className="flex items-center justify-between p-2">
+        <PictureInPicture2Icon className="text-lg text-default-300 ml-2" />
+        {/* <GripHorizontalIcon className="text-lg text-default-300" /> */}
+
+        <Button
+          isIconOnly
+          size="sm"
+          radius="full"
+          variant="light"
+          color="danger"
+          className="text-foreground"
+          onPress={() => setMiniPlayerVisibility(false)}>
+          <XIcon className="text-lg" />
+        </Button>
+      </div>
+
+      <Player mini />
     </div>
   )
 }

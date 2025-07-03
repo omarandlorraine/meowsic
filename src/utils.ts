@@ -17,12 +17,16 @@ export function formatTime(value?: number | null): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
-type Store = { fontSize: number; isPlayerMaximized: boolean }
+type Store = { fontSize: number; isPlayerMaximized: boolean; isMiniPlayerVisible: boolean }
 
-export const store = createStore<Store>(() => ({ fontSize: 16, isPlayerMaximized: false }))
+export const store = createStore<Store>(() => ({ fontSize: 16, isPlayerMaximized: false, isMiniPlayerVisible: false }))
 
 export function setPlayerMaximized(isMaximized: boolean) {
   store.setState({ isPlayerMaximized: isMaximized })
+}
+
+export function setMiniPlayerVisibility(isVisible: boolean) {
+  store.setState({ isMiniPlayerVisible: isVisible })
 }
 
 const observer = new ResizeObserver(entries => {

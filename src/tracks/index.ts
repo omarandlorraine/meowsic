@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
+import MiniSearch from 'minisearch'
 import { formatTime } from '@/utils'
 
 export type Track = {
@@ -46,4 +47,13 @@ export function normalizeMeta(track?: Track | null) {
     date: track?.date,
     genre: track?.genre,
   }
+}
+
+export function createSearchIndex() {
+  return new MiniSearch({
+    idField: 'hash',
+    fields: ['title', 'album', 'artist', 'genre'],
+    storeFields: ['hash'],
+    searchOptions: { boost: { title: 2, album: 1, artist: 1 }, prefix: true, fuzzy: true },
+  })
 }

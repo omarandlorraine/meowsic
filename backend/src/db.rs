@@ -49,8 +49,11 @@ impl Db {
 
         // let multiplier = 10; // TEST large dataset -> upto 376832 tracks at 12x
         // let mut tracks: Vec<Track> = tracks;
-        // for _ in 0..multiplier {
-        //     tracks.extend(tracks.clone().into_iter());
+        // for i in 0..multiplier {
+        //     tracks.extend(tracks.clone().into_iter().enumerate().map(|(k, mut t)| {
+        //         t.hash = format!("{}-{i}-{k}", t.hash);
+        //         t
+        //     }));
         // }
 
         Ok(tracks)

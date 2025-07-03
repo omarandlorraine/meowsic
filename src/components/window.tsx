@@ -10,17 +10,20 @@ import {
   MinusIcon,
   MusicIcon,
   PawPrintIcon,
+  PictureInPicture2Icon,
   SettingsIcon,
   UserRoundIcon,
   XIcon,
 } from 'lucide-react'
-import { setPlayerMaximized, store } from '@/utils'
+import { setMiniPlayerVisibility, setPlayerMaximized, store } from '@/utils'
+import { MiniPlayer } from '@/player/components'
 import type { LucideIcon } from 'lucide-react'
 
 export function Window() {
   const location = useLocation()
   const currentWindow = getCurrentWindow()
-  const isPlayerMaximized = useStore(store, state => state.isPlayerMaximized)
+  const { isPlayerMaximized, isMiniPlayerVisible } = useStore(store)
+
   const showBars = !isPlayerMaximized || location.pathname !== '/'
 
   return (
@@ -40,6 +43,16 @@ export function Window() {
           <PawPrintIcon className="text-lg text-secondary-600" /> Meowsic
         </Button>
 
+        <Button
+          isIconOnly
+          radius="none"
+          className="ml-auto"
+          variant={isMiniPlayerVisible ? 'flat' : 'light'}
+          color={isMiniPlayerVisible ? 'secondary' : 'default'}
+          onPress={() => setMiniPlayerVisibility(!isMiniPlayerVisible)}>
+          <PictureInPicture2Icon className={cn('text-lg', !isMiniPlayerVisible && 'text-default-500')} />
+        </Button>
+
         {location.pathname === '/' && (
           <Button
             isIconOnly
@@ -51,7 +64,7 @@ export function Window() {
           </Button>
         )}
 
-        <Button variant="light" radius="none" className="ml-auto min-w-12" onPress={() => currentWindow.minimize()}>
+        <Button variant="light" radius="none" className="min-w-12" onPress={() => currentWindow.minimize()}>
           <MinusIcon className="text-lg text-default-500" />
         </Button>
 
@@ -84,6 +97,8 @@ export function Window() {
 
         <Outlet />
       </div>
+
+      {isMiniPlayerVisible && location.pathname !== '/' && <MiniPlayer />}
     </>
   )
 }
