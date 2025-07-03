@@ -1,5 +1,5 @@
 use crate::db::GetTracksFilters;
-use crate::tracks::{Album, Track};
+use crate::tracks::{Album, Track, find_artist_image};
 use crate::{AppState, Error};
 use std::path::PathBuf;
 use tauri::State;
@@ -157,4 +157,12 @@ pub async fn db_set_dirs(state: State<AppState, '_>, dirs: Vec<String>) -> Resul
 #[tauri::command]
 pub async fn db_get_dirs(state: State<AppState, '_>) -> Result<Vec<String>, Error> {
     Ok(state.db.get_dirs().await?)
+}
+
+#[tauri::command]
+pub async fn tracks_find_artist_image(
+    state: State<AppState, '_>,
+    name: String,
+) -> Result<Option<String>, Error> {
+    Ok(find_artist_image(&state.http_client, name).await?)
 }

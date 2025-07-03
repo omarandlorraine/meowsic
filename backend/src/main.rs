@@ -14,6 +14,7 @@ use player::Player;
 use rodio::{OutputStream, Sink};
 use serde::Serialize;
 use std::sync::Arc;
+use tauri_plugin_http::reqwest::Client as HttpClient;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -24,9 +25,16 @@ async fn main() -> Result<()> {
     let player = Arc::new(Mutex::new(Player::new(sink)?));
     let db = Db::new("meowsic.db").await?;
 
+    let user_agent = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
+    let http_client = HttpClient::builder().user_agent(user_agent).build()?;
+
     db.init().await?;
 
-    let state = AppState { player, db };
+    let state = AppState {
+        http_client,
+        player,
+        db,
+    };
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -60,6 +68,7 @@ async fn main() -> Result<()> {
             commands::db_scan_dirs,
             commands::db_get_dirs,
             commands::db_set_dirs,
+            commands::tracks_find_artist_image,
         ])
         .run(tauri::generate_context!())?;
 
@@ -67,6 +76,7 @@ async fn main() -> Result<()> {
 }
 
 struct AppState {
+    http_client: HttpClient,
     player: Arc<Mutex<Player>>,
     db: Db,
 }

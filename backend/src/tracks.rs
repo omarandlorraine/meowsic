@@ -11,6 +11,7 @@ use symphonia::core::io::MediaSourceStream;
 use symphonia::core::meta::{MetadataOptions, StandardTagKey, StandardVisualKey};
 use symphonia::core::probe::Hint;
 use symphonia::default::get_probe;
+use tauri_plugin_http::reqwest::Client as HttpClient;
 use walkdir::WalkDir;
 
 #[skip_serializing_none]
@@ -170,4 +171,37 @@ impl From<TrackRow> for Track {
 pub struct Album {
     pub name: String,
     pub cover: Option<String>,
+}
+
+pub async fn find_artist_image(
+    _http_client: &HttpClient,
+    _name: impl AsRef<str>,
+) -> Result<Option<String>> {
+    // let url = format!(
+    //     "http://ws.audioscrobbler.com/2.0/?method=artist.getinfo&artist={name}&api_key={api_key}&format=json",
+    //     api_key = "",
+    //     name = name.as_ref()
+    // );
+
+    // let data: JsonValue = http_client.get(&url).send().await?.json().await?;
+    // let mbid = data["artist"]["mbid"].as_str().unwrap_or_default();
+
+    // let url = format!("https://musicbrainz.org/ws/2/artist/{mbid}?inc=url-rels&fmt=json");
+    // let data: JsonValue = http_client.get(&url).send().await?.json().await?;
+
+    // let url = data["relations"]
+    //     .as_array()
+    //     .and_then(|x| x.iter().find(|it| it["type"].as_str() == Some("image")))
+    //     .and_then(|it| it["url"]["resource"].as_str())
+    //     .map(|x| x.to_string());
+
+    // let url = url
+    //     .filter(|x| x.starts_with("https://commons.wikimedia.org/wiki/File:"))
+    //     .map(|x| {
+    //         "https://commons.wikimedia.org/wiki/Special:Redirect/file".to_string()
+    //             + &x[x.rfind('/').unwrap_or(0)..]
+    //     });
+
+    // Ok(url)
+    Ok(None)
 }

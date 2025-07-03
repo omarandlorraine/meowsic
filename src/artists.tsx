@@ -4,6 +4,7 @@ import { Card as ExternalCard, CardFooter } from '@heroui/react'
 import { UserRoundIcon } from 'lucide-react'
 import { getArtists } from '@/tracks'
 import { Cover } from '@/tracks/components'
+import { invoke } from '@tauri-apps/api/core'
 
 export function ArtistsScreen() {
   const query = useQuery({ queryKey: ['artists'], queryFn: getArtists })
@@ -20,7 +21,12 @@ export function ArtistsScreen() {
 type CardProps = { data: string }
 
 function Card({ data }: CardProps) {
-  const queryCover = useQuery({ queryKey: ['artist-cover', data], queryFn: () => getArtistCoverUrl(data), retry: 1 })
+  const queryCover = useQuery({
+    queryKey: ['artist-cover', data],
+    queryFn: () => findArtistImage(data),
+    enabled: false,
+    retry: 1,
+  })
 
   return (
     <ExternalCard
@@ -39,14 +45,6 @@ function Card({ data }: CardProps) {
   )
 }
 
-export async function getArtistCoverUrl(_name: string) {
-  // TODO: for free
-  // const titles = name.replaceAll(' ', '_').replaceAll(', ', '|')
-  // const res = await fetch(
-  //   `https://en.wikipedia.org/w/api.php?action=query&titles=${titles}&prop=pageimages&pithumbsize=500&format=json&origin=*`,
-  // )
-  // const data = await res.json()
-  // const page: any = Object.values(data.query.pages)[0]
-  // return page?.thumbnail?.source
-  return null
+export async function findArtistImage(name: string) {
+  return await invoke<string | null>('tracks_find_artist_image', { name })
 }
