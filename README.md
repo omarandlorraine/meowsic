@@ -12,3 +12,5 @@ A beautiful, modern, cross-platform, offline music player
 - [ ] assets manager
 - [ ] web audio fallback
 - [ ] unsupported audio fallback
+- [ ] logo
+- [ ] better import fonts
