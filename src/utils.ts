@@ -65,3 +65,22 @@ export function reorder<T>(items: T[], src: number, dst: number) {
   res.splice(dst, 0, removed)
   return res
 }
+
+type Theme = { fontFamily: string; fontSize: number }
+
+export function applyTheme({ fontFamily, fontSize }: Theme = getThemeFromStorage()) {
+  document.documentElement.style.setProperty('--font-mono', 'JetBrains Mono')
+  document.documentElement.style.setProperty('--font-sans', fontFamily)
+  document.documentElement.style.setProperty('font-size', `${fontSize}px`)
+}
+
+export function setThemeToStorage(theme: Theme) {
+  localStorage.setItem('theme', JSON.stringify(theme))
+}
+
+export function getThemeFromStorage(): Theme {
+  const theme = localStorage.getItem('theme')
+  if (!theme) return { fontFamily: 'Poppins', fontSize: 16 }
+
+  return JSON.parse(theme)
+}

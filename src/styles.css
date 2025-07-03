@@ -5,17 +5,10 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: 'Poppins';
-  --font-mono: 'JetBrains Mono';
-
   --breakpoint-3xl: 1920px;
 }
 
 @layer base {
-  :root {
-    @apply text-[14px] 3xl:text-[16px];
-  }
-
   svg {
     @apply size-[1em];
   }
@@ -35,4 +28,39 @@
   ::-webkit-scrollbar-track {
     @apply bg-default-100/25;
   }
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('./fonts/inter-variable.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('./fonts/poppins-regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Merriweather';
+  src: url('./fonts/merriweather-variable.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Dancing Script';
+  src: url('./fonts/dancing-script-variable.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('./fonts/jetbrains-mono-variable.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
 }

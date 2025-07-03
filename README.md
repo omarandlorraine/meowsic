@@ -10,7 +10,8 @@ A beautiful, modern, cross-platform, offline music player
 - [ ] mini player
 - [ ] lyrics manager
 - [ ] assets manager
-- [ ] web audio fallback
 - [ ] unsupported audio fallback
+- [ ] open with
+- [x] better import fonts
+- [ ] animations
 - [ ] logo
-- [ ] better import fonts
