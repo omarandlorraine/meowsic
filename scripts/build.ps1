@@ -5,12 +5,18 @@ $originalLocation = Get-Location
 $projectRoot = (Resolve-Path "$PSScriptRoot/..").Path
 $backendPath = Join-Path $projectRoot "backend"
 $releasePath = Join-Path $projectRoot "release"
+$distPath = Join-Path $projectRoot "dist"
 $binPath = Join-Path $projectRoot "bin"
 $exeName = "meowsic.exe"
 
 # Run build
 Set-Location $projectRoot
 pnpm build
+
+# Remove dist folder
+if (Test-Path $distPath) {
+    Remove-Item -Recurse -Force $distPath
+}
 
 # Get version from Cargo.toml
 $versionLine = Select-String -Path "$backendPath/Cargo.toml" -Pattern '^version\s*=\s*".+"'

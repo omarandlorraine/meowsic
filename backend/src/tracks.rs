@@ -108,17 +108,29 @@ impl Track {
                     }
                 }
 
-                for entry in rev.visuals() {
-                    if let Some(key) = entry.usage {
-                        if matches!(key, StandardVisualKey::FrontCover) {
-                            let (_, ext) =
-                                entry.media_type.split_once("/").unwrap_or(("image", "jpg"));
-                            let path = covers_path.as_ref().join(format!("{hash}.{ext}"));
+                let visuals = rev.visuals();
+                let mut priority = [None, None];
+                let mut others = Vec::with_capacity(visuals.len());
 
-                            fs::write(&path, &entry.data)?;
-                            data.cover = Some(path);
-                        }
+                for entry in visuals {
+                    match entry.usage {
+                        Some(StandardVisualKey::FrontCover) => priority[0] = Some(entry),
+                        Some(StandardVisualKey::BackCover) => priority[1] = Some(entry),
+                        _ => others.push(entry),
                     }
+                }
+
+                for entry in priority.into_iter().flatten().chain(others) {
+                    if entry.data.is_empty() {
+                        continue;
+                    }
+
+                    let (_, ext) = entry.media_type.split_once("/").unwrap_or(("image", "jpg"));
+                    let path = covers_path.as_ref().join(format!("{hash}.{ext}"));
+
+                    fs::write(&path, &entry.data)?;
+                    data.cover = Some(path);
+                    break;
                 }
             }
         }
