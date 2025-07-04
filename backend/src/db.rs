@@ -5,14 +5,16 @@ use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Pool, QueryBuilder, Sqlite};
 use std::collections::HashSet;
-use std::path::Path;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 pub struct Db {
     pool: Pool<Sqlite>,
+    covers_path: PathBuf,
 }
 
 impl Db {
-    pub async fn new(path: impl AsRef<Path>) -> Result<Self> {
+    pub async fn new(path: impl AsRef<Path>, covers_path: PathBuf) -> Result<Self> {
         let options = SqliteConnectOptions::new()
             .filename(path)
             .create_if_missing(true);
@@ -22,7 +24,7 @@ impl Db {
             .connect_with(options)
             .await?;
 
-        Ok(Self { pool })
+        Ok(Self { pool, covers_path })
     }
 
     pub async fn get_tracks(&self, filters: &GetTracksFilters) -> Result<Vec<Track>> {
@@ -60,7 +62,7 @@ impl Db {
     }
 
     pub async fn scan_dirs(&self, dirs: &[impl AsRef<Path>]) -> Result<()> {
-        let tracks = tracks::scan(&dirs)?;
+        let tracks = tracks::scan(&dirs, &self.covers_path)?;
 
         let mut qb = QueryBuilder::new(
             "INSERT INTO tracks 
@@ -443,6 +445,8 @@ impl Db {
     }
 
     pub async fn init(&self) -> Result<()> {
+        fs::create_dir_all(&self.covers_path)?;
+
         sqlx::query(include_str!("sql/init.sql"))
             .execute(&self.pool)
             .await?;

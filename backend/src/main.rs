@@ -7,7 +7,7 @@ mod player;
 mod tracks;
 mod utils;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use db::Db;
 use parking_lot::Mutex;
 use player::Player;
@@ -18,12 +18,17 @@ use tauri_plugin_http::reqwest::Client as HttpClient;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let exe_path = std::env::current_exe()?
+        .parent()
+        .context("failed to get exe path")?
+        .to_path_buf();
+
     // ! DO NOT DROP _stream (don't assign to just '_')
     let (_stream, handle) = OutputStream::try_default()?;
     let sink = Sink::try_new(&handle)?;
 
     let player = Arc::new(Mutex::new(Player::new(sink)?));
-    let db = Db::new("meowsic.db").await?;
+    let db = Db::new(exe_path.join("meowsic.db"), exe_path.join("covers")).await?;
 
     let user_agent = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
     let http_client = HttpClient::builder().user_agent(user_agent).build()?;

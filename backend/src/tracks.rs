@@ -127,13 +127,10 @@ impl Track {
     }
 }
 
-pub fn scan(dirs: &[impl AsRef<Path>]) -> Result<Vec<Track>> {
+pub fn scan(dirs: &[impl AsRef<Path>], covers_path: impl AsRef<Path>) -> Result<Vec<Track>> {
     let mut tracks = Vec::new();
 
     for dir in dirs {
-        let covers_path = dir.as_ref().join("meowsic-covers");
-        fs::create_dir_all(&covers_path)?;
-
         for entry in WalkDir::new(dir)
             .into_iter()
             .filter_map(|x| x.ok())
