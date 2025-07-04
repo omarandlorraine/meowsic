@@ -12,6 +12,7 @@
 - [ ] animations
 - [ ] logo
 - [ ] optimizations (memo, etc.)
+- [ ] remove web elements like selection and navigations
 - [x] emotion ranking
 - [x] search
 - [x] better import fonts
