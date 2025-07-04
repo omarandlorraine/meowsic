@@ -128,6 +128,8 @@ impl Track {
 }
 
 pub fn scan(dirs: &[impl AsRef<Path>], covers_path: impl AsRef<Path>) -> Result<Vec<Track>> {
+    const SUPPORTED: &[&str] = &["mp3", "m4a", "flac", "wav", "ogg", "opus", "aac", "aiff"];
+
     let mut tracks = Vec::new();
 
     for dir in dirs {
@@ -136,7 +138,17 @@ pub fn scan(dirs: &[impl AsRef<Path>], covers_path: impl AsRef<Path>) -> Result<
             .filter_map(|x| x.ok())
             .filter(|x| x.file_type().is_file())
         {
-            if let Ok(track) = Track::new(entry.path(), &covers_path) {
+            let path = entry.path();
+
+            if !SUPPORTED.iter().any(|&x| {
+                path.extension()
+                    .and_then(|x| x.to_str())
+                    .map_or(false, |ext| x.eq_ignore_ascii_case(ext))
+            }) {
+                continue;
+            }
+
+            if let Ok(track) = Track::new(path, &covers_path) {
                 tracks.push(track);
             }
         }
