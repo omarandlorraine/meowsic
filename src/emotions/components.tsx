@@ -20,7 +20,7 @@ import { usePlayer } from '@/player'
 import { DEFAULT_EMOTION, getEmotions, getEmotionTracks, setEmotion, store } from '@/emotions'
 import { createSearchIndex } from '@/tracks'
 import { SearchBar } from '@/components'
-import { useTrackSelection, ControlsContainer, ListItem, List } from '@/tracks/components'
+import { ControlsContainer, ListItem, List } from '@/tracks/components'
 import type { Track } from '@/tracks'
 
 const searchIndex = createSearchIndex()
@@ -28,7 +28,6 @@ const searchIndex = createSearchIndex()
 export function EmotionScreen() {
   const params = useParams<{ name: string }>()
   const player = usePlayer()
-  const selection = useTrackSelection()
 
   const query = useQuery({ queryKey: ['emotions'], queryFn: getEmotions })
   const emotion = query.data?.find(it => it.name === params.name)
