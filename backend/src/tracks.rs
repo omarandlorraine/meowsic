@@ -31,6 +31,7 @@ pub struct Track {
     pub date: Option<String>,
     pub genre: Option<String>,
     pub position: Option<u64>,
+    pub rank: Option<u64>,
 }
 
 impl Track {
@@ -163,6 +164,7 @@ impl From<TrackRow> for Track {
             date: row.date,
             genre: row.genre,
             position: row.position.and_then(|x| x.try_into().ok()),
+            rank: row.rank.and_then(|x| x.try_into().ok()),
         }
     }
 }

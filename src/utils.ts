@@ -88,3 +88,9 @@ export function getThemeFromStorage(): Theme {
 
   return JSON.parse(theme)
 }
+
+export type EditorType = 'new' | 'update' | 'remove'
+
+export function isEditorOfType(type: EditorType, expected: EditorType) {
+  return type[0] === expected[0]
+}

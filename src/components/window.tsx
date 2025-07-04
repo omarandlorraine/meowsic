@@ -12,11 +12,13 @@ import {
   PawPrintIcon,
   PictureInPicture2Icon,
   SettingsIcon,
+  SmileIcon,
   UserRoundIcon,
   XIcon,
 } from 'lucide-react'
 import { setMiniPlayerVisibility, setPlayerMaximized, store } from '@/utils'
 import { MiniPlayer } from '@/player/components'
+import { EmotionSelect } from '@/emotions/components'
 import type { LucideIcon } from 'lucide-react'
 
 export function Window() {
@@ -43,10 +45,11 @@ export function Window() {
           <PawPrintIcon className="text-lg text-secondary-600" /> Meowsic
         </Button>
 
+        <EmotionSelect className="ml-auto" />
+
         <Button
           isIconOnly
           radius="none"
-          className="ml-auto"
           variant={isMiniPlayerVisible ? 'flat' : 'light'}
           color={isMiniPlayerVisible ? 'secondary' : 'default'}
           onPress={() => setMiniPlayerVisibility(!isMiniPlayerVisible)}>
@@ -84,6 +87,7 @@ export function Window() {
           <div className="flex flex-col gap-2 p-3 pt-[calc(theme(spacing.10)+theme(spacing.3))] h-full w-44">
             <NavLink url="/tracks" title="Tracks" icon={MusicIcon} />
             <NavLink url="/playlists" title="Playlists" icon={ListMusicIcon} />
+            <NavLink url="/emotions" title="Emotions" icon={SmileIcon} />
 
             <hr className="border-default/30 mx-2" />
 

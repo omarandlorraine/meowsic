@@ -135,8 +135,8 @@ export function Player({ mini }: PlayerProps) {
 export function MiniPlayer() {
   return (
     <div
-      className="fixed w-160 flex flex-col bottom-8 right-8 border border-default/30
-      bg-background/60 backdrop-blur-lg z-50 rounded-small shadow-small">
+      className="fixed w-160 flex flex-col bottom-6 right-6 border border-default/30
+      bg-background/25 backdrop-blur-lg z-50 rounded-small shadow-small">
       <div className="flex items-center justify-between p-2">
         <PictureInPicture2Icon className="text-lg text-default-300 ml-2" />
         {/* <GripHorizontalIcon className="text-lg text-default-300" /> */}

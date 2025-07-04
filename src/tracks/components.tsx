@@ -79,6 +79,7 @@ export function TracksScreen() {
     await player.goto(0)
     await player.play()
 
+    player.setTemplate(null)
     setMiniPlayerVisibility(true)
   }
 
@@ -288,15 +289,15 @@ export const ListItem = memo(
           draggableProps?.snapshot.isDragging &&
             'bg-secondary-50/25 border-secondary/10 border saturate-125 backdrop-blur-lg rounded-small cursor-grabbing',
         )}>
-        <Checkbox
-          color="success"
-          radius="full"
-          isSelected={isSelected}
-          isDisabled={draggableProps?.snapshot.isDragging}
-          onValueChange={() => {
-            if (onToggleSelect) onToggleSelect(data, isSelected)
-          }}
-        />
+        {onToggleSelect && (
+          <Checkbox
+            color="success"
+            radius="full"
+            isSelected={isSelected}
+            isDisabled={draggableProps?.snapshot.isDragging}
+            onValueChange={() => onToggleSelect(data, isSelected)}
+          />
+        )}
 
         <Button
           isIconOnly

@@ -1,7 +1,7 @@
 use crate::tracks;
 use crate::tracks::{Album, Track};
 use anyhow::Result;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Pool, QueryBuilder, Sqlite};
 use std::collections::HashSet;
@@ -332,6 +332,66 @@ impl Db {
         Ok(())
     }
 
+    pub async fn get_emotions(&self) -> Result<Vec<Emotion>> {
+        let names: Vec<Emotion> = sqlx::query_as("SELECT * FROM emotions ORDER BY rowid ASC")
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(names)
+    }
+
+    pub async fn get_emotion_tracks(&self, name: impl AsRef<str>) -> Result<Vec<Track>> {
+        let entries: Vec<TrackRow> = sqlx::query_as(
+            "
+            SELECT
+                t.hash,
+                t.path,
+                t.name,
+                t.extension,
+                t.duration,
+                t.cover,
+                t.title,
+                t.artist,
+                t.album,
+                t.album_artist,
+                t.date,
+                t.genre,
+                et.rank
+            FROM tracks AS t
+            JOIN emotion_tracks AS et ON et.track_hash = t.hash
+            WHERE et.emotion_name = $1
+            ORDER BY et.rank DESC
+            ",
+        )
+        .bind(name.as_ref())
+        .fetch_all(&self.pool)
+        .await?;
+
+        let tracks = entries.into_iter().map(Track::from).collect();
+
+        Ok(tracks)
+    }
+
+    pub async fn rank_up_emotion_track(
+        &self,
+        name: impl AsRef<str>,
+        hash: impl AsRef<str>,
+    ) -> Result<()> {
+        sqlx::query(
+            "
+            INSERT INTO emotion_tracks (emotion_name, track_hash, rank) VALUES ($1, $2, 1)
+            ON CONFLICT(emotion_name, track_hash)
+                DO UPDATE SET rank = rank + 1
+            ",
+        )
+        .bind(name.as_ref())
+        .bind(hash.as_ref())
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
     pub async fn get_albums(&self) -> Result<Vec<Album>> {
         let albums: Vec<Album> = sqlx::query_as(
             "
@@ -383,60 +443,9 @@ impl Db {
     }
 
     pub async fn init(&self) -> Result<()> {
-        sqlx::query(
-            "
-            CREATE TABLE IF NOT EXISTS dirs (                
-                path    TEXT    PRIMARY KEY
-            );
-
-            CREATE TABLE IF NOT EXISTS tracks (                
-                hash            TEXT        PRIMARY KEY,
-                path            TEXT        NOT NULL,
-                name            TEXT        NOT NULL,
-                extension       TEXT        NOT NULL,
-                duration        INTEGER     NOT NULL,
-                cover           TEXT,
-                title           TEXT,
-                artist          TEXT,
-                album           TEXT,
-                album_artist    TEXT,
-                date            TEXT,
-                genre           TEXT
-            );
-
-            CREATE TABLE IF NOT EXISTS playlists (
-                name    TEXT    PRIMARY KEY                
-            );
-
-            CREATE TABLE IF NOT EXISTS playlist_tracks (
-                playlist_name   TEXT        NOT NULL,
-                track_hash      TEXT        NOT NULL,
-                position        INTEGER     NOT NULL,
-
-                PRIMARY KEY (playlist_name, track_hash),
-                FOREIGN KEY (playlist_name) REFERENCES playlists(name)
-                    ON DELETE CASCADE ON UPDATE CASCADE
-            );
-
-            CREATE TABLE IF NOT EXISTS moods (
-                name    TEXT    PRIMARY KEY,
-                icon    TEXT    NOT NULL,
-                color   TEXT    NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS mood_tracks (
-                mood_name       TEXT        NOT NULL,
-                track_hash      TEXT        NOT NULL,
-                rank            INTEGER     NOT NULL,
-
-                PRIMARY KEY (mood_name, track_hash),
-                FOREIGN KEY (mood_name) REFERENCES moods(name)
-                    ON DELETE CASCADE ON UPDATE CASCADE
-            );
-            ",
-        )
-        .execute(&self.pool)
-        .await?;
+        sqlx::query(include_str!("sql/init.sql"))
+            .execute(&self.pool)
+            .await?;
 
         Ok(())
     }
@@ -458,6 +467,15 @@ pub struct TrackRow {
     pub genre: Option<String>,
     #[sqlx(default)]
     pub position: Option<i64>,
+    #[sqlx(default)]
+    pub rank: Option<i64>,
+}
+
+#[derive(sqlx::FromRow, Debug, Serialize, Deserialize)]
+pub struct Emotion {
+    pub name: String,
+    pub color: String,
+    pub icon: String,
 }
 
 #[derive(Deserialize)]

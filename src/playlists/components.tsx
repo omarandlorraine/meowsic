@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useDebounce } from 'use-debounce'
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, Input, useDisclosure } from '@heroui/react'
 import { CheckIcon, MoveRightIcon, PlayIcon, PlusIcon, SquarePenIcon, Trash2Icon } from 'lucide-react'
-import { reorder, setMiniPlayerVisibility } from '@/utils'
+import { reorder, setMiniPlayerVisibility, isEditorOfType } from '@/utils'
 import { usePlayer } from '@/player'
 import {
   addPlaylist,
@@ -19,6 +19,7 @@ import { createSearchIndex, type Track } from '@/tracks'
 import { SearchBar, SelectAllControls } from '@/components'
 import { useTrackSelection, ControlsContainer, ListItem, List } from '@/tracks/components'
 import type { DropResult } from '@hello-pangea/dnd'
+import type { EditorType } from '@/utils'
 
 const searchIndex = createSearchIndex()
 
@@ -77,6 +78,7 @@ export function PlaylistScreen() {
     await player.goto(0)
     await player.play()
 
+    player.setTemplate(null)
     setMiniPlayerVisibility(true)
   }
 
@@ -242,8 +244,6 @@ export function PlaylistsScreen() {
   )
 }
 
-type EditorType = 'new' | 'update' | 'remove'
-
 type PlaylistEditorModalProps = {
   type: EditorType
   isOpen?: boolean
@@ -255,15 +255,17 @@ type PlaylistEditorModalProps = {
 export function PlaylistEditorModal({ isOpen, onOpenChange, existing, type, onAction }: PlaylistEditorModalProps) {
   const [name, setName] = useState(existing ?? '')
 
+  const isOfType = (expected: EditorType) => isEditorOfType(type, expected)
+
   return (
     <Modal isOpen={isOpen} placement="bottom-center" backdrop="blur" radius="sm" onOpenChange={onOpenChange}>
       <ModalContent>
         <ModalHeader>
-          {type === 'new' ? 'New Playlist' : type === 'update' ? 'Edit Playlist' : 'Remove Playlist'}
+          {isOfType('new') ? 'New Playlist' : isOfType('update') ? 'Edit Playlist' : 'Remove Playlist'}
         </ModalHeader>
 
         <ModalBody>
-          {type === 'remove' ? (
+          {isOfType('remove') ? (
             <div className="text-default-500">Are you sure you want to remove this playlist?</div>
           ) : (
             <Input
@@ -283,9 +285,9 @@ export function PlaylistEditorModal({ isOpen, onOpenChange, existing, type, onAc
             radius="sm"
             variant="flat"
             onPress={() => onAction(name)}
-            color={type === 'remove' ? 'danger' : 'success'}
-            isDisabled={!name.trim() || (type === 'update' && name === existing)}>
-            <CheckIcon className="text-lg" /> {type === 'remove' ? 'Remove' : type === 'new' ? 'Create' : 'Save'}
+            color={isOfType('remove') ? 'danger' : 'success'}
+            isDisabled={!name.trim() || (isOfType('update') && name === existing)}>
+            <CheckIcon className="text-lg" /> {isOfType('remove') ? 'Remove' : isOfType('new') ? 'Create' : 'Save'}
           </Button>
         </ModalFooter>
       </ModalContent>

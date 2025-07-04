@@ -1,4 +1,4 @@
-use crate::db::GetTracksFilters;
+use crate::db::{Emotion, GetTracksFilters};
 use crate::tracks::{Album, Track, find_artist_image};
 use crate::{AppState, Error};
 use std::path::PathBuf;
@@ -132,6 +132,28 @@ pub async fn db_reorder_playlist_track(
         .db
         .reorder_playlist_track(name, hash, src, dst)
         .await?)
+}
+
+#[tauri::command]
+pub async fn db_get_emotions(state: State<AppState, '_>) -> Result<Vec<Emotion>, Error> {
+    Ok(state.db.get_emotions().await?)
+}
+
+#[tauri::command]
+pub async fn db_get_emotion_tracks(
+    state: State<AppState, '_>,
+    name: String,
+) -> Result<Vec<Track>, Error> {
+    Ok(state.db.get_emotion_tracks(name).await?)
+}
+
+#[tauri::command]
+pub async fn db_rank_up_emotion_track(
+    state: State<AppState, '_>,
+    name: String,
+    hash: String,
+) -> Result<(), Error> {
+    Ok(state.db.rank_up_emotion_track(name, hash).await?)
 }
 
 #[tauri::command]

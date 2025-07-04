@@ -1,8 +1,10 @@
 import { invoke } from '@tauri-apps/api/core'
 import { createStore, useStore } from 'zustand'
 import type { Track } from '@/tracks'
+import { rankUp } from '@/emotions'
 
 type Timeout = ReturnType<typeof setInterval>
+type Template = 'emotions'
 
 type Store = {
   queue: Track[]
@@ -12,6 +14,7 @@ type Store = {
   interval: Timeout | null
   isPaused: boolean
   looping: boolean
+  template: Template | null
 }
 
 export const store = createStore<Store>(() => ({
@@ -22,6 +25,7 @@ export const store = createStore<Store>(() => ({
   interval: null,
   isPaused: true,
   looping: false,
+  template: null,
 }))
 
 async function setQueue(queue: Track[]) {
@@ -113,6 +117,10 @@ export async function setVolume(volume: number) {
   store.setState({ volume })
 }
 
+export function setTemplate(template: Template | null) {
+  store.setState({ template })
+}
+
 function createInterval() {
   return setInterval(() => {
     const state = store.getState()
@@ -122,6 +130,12 @@ function createInterval() {
     if (state.elapsed > current.duration) return next()
 
     store.setState(state => ({ elapsed: state.elapsed + 1 }))
+
+    // since only 'emotions' are denied from ranking up
+    // n seconds before the end, not awaiting the promise
+    if (!state.template && current.duration - state.elapsed === 10) {
+      rankUp(current)
+    }
   }, 1000)
 }
 
@@ -157,5 +171,6 @@ export function usePlayer() {
     hasNext,
     hasPrev,
     looping,
+    setTemplate,
   }
 }
