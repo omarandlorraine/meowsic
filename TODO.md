@@ -13,6 +13,7 @@
 - [ ] logo
 - [ ] optimizations (memo, etc.)
 - [ ] remove web elements like selection and navigations
+- [ ] tauri security (csp for assets, etc.)
 - [x] emotion ranking
 - [x] search
 - [x] better import fonts
