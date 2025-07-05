@@ -67,7 +67,8 @@ impl Player {
 
     pub fn set_current(&mut self, index: usize) -> Result<()> {
         // ? 0 is allowed as a valid default index
-        if index >= self.queue.len() {
+        // ? so bounds check can be > queue length
+        if index > self.queue.len() {
             Err(anyhow!("Index out of bounds"))
         } else if index == self.current {
             Ok(())

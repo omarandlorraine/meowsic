@@ -69,7 +69,9 @@ export function PlaylistScreen() {
     const dst = result.destination.index
     if (src === dst) return
 
+    // optimistic update for smooth user experience
     setFiltered(state => reorder(state, src, dst))
+
     await reorderPlaylistTrack(params.name, filtered[src], src, dst)
   }
 
@@ -152,7 +154,7 @@ export function PlaylistScreen() {
             data={item}
             onPlay={onPlay}
             isSelected={selection.isSelected(item)}
-            isPlaying={player.current?.hash === item.hash}
+            isPlaying={player.current === item}
             onToggleSelect={selection.toggle}
             draggableProps={draggableProps}
           />

@@ -2,7 +2,6 @@
 
 ## Features
 
-- [ ] shuffle and repeat controls
 - [ ] lyrics manager
 - [ ] assets manager
 - [ ] unsupported audio fallback
@@ -12,6 +11,7 @@
 - [ ] optimizations (memo, etc.)
 - [ ] toolips and guides
 - [ ] playlist export
+- [x] shuffle and repeat controls
 - [x] tauri security (csp for assets, etc.)
 - [x] remove web elements like selection and context menu
 - [x] hw keybinds (media controls)

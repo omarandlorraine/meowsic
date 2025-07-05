@@ -13,18 +13,24 @@ export function QueueScreen() {
   const onRemove = async () => {
     if (!player.current) return
 
-    if (!selection.values.length) return player.reset()
+    // case: remove all tracks when selection is empty, reset player state
+    if (!selection.values.length) return await player.reset()
 
     const filtered = player.queue.filter(track => !selection.isSelected(track))
-    const newIndex = filtered.findIndex(track => track === player.current) // compare by reference
 
-    if (!filtered.length) player.reset()
+    // case: if remaining queue is empty, reset player state
+    if (!filtered.length) await player.reset()
     else {
       await player.setQueue(filtered)
+      const index = filtered.findIndex(track => track === player.current)
 
-      if (newIndex !== -1) await player.setCurrent(newIndex)
-      else {
-        // current track was removed
+      // case: current track was not removed
+      if (index !== -1) {
+        await player.setCurrent(index)
+        player.setState({ queue: filtered, current: index })
+      } else {
+        // case: current track was removed
+        player.setState({ queue: filtered })
         await player.goto(0)
         await player.pause()
       }
@@ -40,11 +46,14 @@ export function QueueScreen() {
     const dst = result.destination.index
     if (src === dst) return
 
-    await player.setQueue(reorder(player.queue, src, dst))
+    const reordered = reorder(player.queue, src, dst)
+    const index = reordered.findIndex(it => it === player.current) // compare by reference
 
-    if (src === player.currentIndex) await player.setCurrent(dst)
-    else if (src < dst) await player.setCurrent(player.currentIndex - 1)
-    else if (src > dst) await player.setCurrent(player.currentIndex + 1)
+    // optimistic update for smooth user experience
+    player.setState({ queue: reordered, current: index })
+
+    await player.setQueue(reordered)
+    await player.setCurrent(index)
   }
 
   return (
@@ -75,7 +84,7 @@ export function QueueScreen() {
             index={index}
             data={item}
             isSelected={selection.isSelected(item)}
-            isPlaying={player.current?.hash === item.hash}
+            isPlaying={player.current === item}
             onToggleSelect={selection.toggle}
             draggableProps={draggableProps}
             onPlay={async () => {

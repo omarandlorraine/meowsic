@@ -101,7 +101,7 @@ export function EmotionScreen() {
             key={item.hash}
             index={index}
             data={item}
-            isPlaying={player.current?.hash === item.hash}
+            isPlaying={player.current === item}
             draggableProps={draggableProps}
             onPlay={async () => {
               await player.goto(index)

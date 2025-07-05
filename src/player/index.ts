@@ -13,64 +13,43 @@ type Store = {
   queue: Track[]
   current: number
   elapsed: number
-  volume: number
   isPaused: boolean
+  // interval is null if the player is paused
+  interval: Timeout | null
   repeat: Repeat | null
   template: Template | null
-  interval: Timeout | null
-  backupQueue: Track[]
   isShuffled: boolean
+  // backup queue for reverting shuffle
+  backupQueue: Track[]
+  // volume: number // TODO: should be persistent
 }
 
-export const store = createStore<Store>(() => ({
-  queue: [],
-  current: 0,
-  elapsed: 0,
-  volume: 1,
-  isPaused: true,
-  repeat: null,
-  template: null,
-  interval: null,
-  backupQueue: [],
-  isShuffled: false,
-}))
-
-async function setQueue(queue: Track[], reflect = true) {
-  await invoke('player_set_queue', { queue: queue.map(t => t.path) })
-
-  if (reflect) store.setState({ queue, backupQueue: [], isShuffled: false })
+function initialState(): Store {
+  return {
+    queue: [],
+    current: 0,
+    elapsed: 0,
+    isPaused: true,
+    interval: null,
+    repeat: null,
+    template: null,
+    isShuffled: false,
+    backupQueue: [],
+  }
 }
 
-async function setCurrent(current: number, reflect = true) {
-  await invoke('player_set_current', { index: current })
+export const store = createStore<Store>(initialState)
 
-  if (reflect) store.setState({ current })
-}
+// NOTE: if not paused, invalidate the interval and create a new one
 
 export async function goto(index: number) {
   const state = store.getState()
   if (!state.isPaused) invalidateInterval(state.interval)
 
   await invoke('player_goto', { index })
-  const interval = state.isPaused ? null : createInterval()
+  const interval = !state.isPaused ? createInterval() : null
 
   store.setState({ current: index, elapsed: 0, interval })
-}
-
-export async function next() {
-  const state = store.getState()
-  const index = nextIndex(state)
-
-  if (index === -1) return
-  await goto(index)
-}
-
-export async function prev() {
-  const state = store.getState()
-  const index = prevIndex(state)
-
-  if (index === -1) return
-  await goto(index)
 }
 
 export async function seek(elapsed: number) {
@@ -78,18 +57,9 @@ export async function seek(elapsed: number) {
   if (!state.isPaused) invalidateInterval(state.interval)
 
   await invoke('player_seek', { elapsed })
-  const interval = state.isPaused ? null : createInterval()
+  const interval = !state.isPaused ? createInterval() : null
 
   store.setState({ elapsed, interval })
-}
-
-export async function stop() {
-  await invoke('player_stop')
-
-  const state = store.getState()
-  invalidateInterval(state.interval)
-
-  store.setState({ elapsed: 0, interval: null, isPaused: true })
 }
 
 export async function pause() {
@@ -112,40 +82,27 @@ export async function play() {
   store.setState({ interval, isPaused: false })
 }
 
-export async function setVolume(volume: number) {
-  await invoke('player_set_volume', { volume })
-  store.setState({ volume })
-}
+export async function playTracks(data: Track | Track[], from = 0) {
+  const queue = Array.isArray(data) ? data : [data]
 
-export async function getArbitraryTracks() {
-  return await invoke<Track[]>('player_get_arbitrary_tracks')
-}
+  await setQueue(queue)
+  store.setState({ queue, isShuffled: false, backupQueue: [] })
 
-export function setTemplate(template: Template | null) {
-  store.setState({ template })
-}
-
-export function setRepeat(repeat: Repeat | null) {
-  store.setState({ repeat })
-}
-
-export async function playTracks(data: Track | Track[]) {
-  await setQueue(Array.isArray(data) ? data : [data])
-  await goto(0)
+  await goto(from)
   await play()
 }
 
 export async function shuffle() {
   const state = store.getState()
   const current = state.queue.at(state.current)
-  if (!current) return
+  if (state.isShuffled) return
 
   const shuffled = state.queue.toSorted(() => Math.random() - 0.5)
-  const index = shuffled.findIndex(it => it.hash === current.hash)
+  const index = shuffled.findIndex(it => it === current)
   const backupQueue = state.queue
 
-  await setCurrent(index, false)
-  await setQueue(shuffled, false)
+  await setCurrent(index)
+  await setQueue(shuffled)
 
   store.setState({ isShuffled: true, backupQueue, current: index, queue: shuffled })
 }
@@ -153,13 +110,13 @@ export async function shuffle() {
 export async function unshuffle() {
   const state = store.getState()
   const current = state.queue.at(state.current)
-  if (!current || !state.isShuffled) return
+  if (!state.isShuffled) return
 
   const original = state.backupQueue
-  const index = original.findIndex(it => it.hash === current.hash)
+  const index = original.findIndex(it => it === current)
 
-  await setCurrent(index, false)
-  await setQueue(original, false)
+  await setCurrent(index)
+  await setQueue(original)
 
   store.setState({ isShuffled: false, backupQueue: [], current: index, queue: original })
 }
@@ -168,6 +125,11 @@ export async function reset() {
   await setQueue([])
   await setCurrent(0)
   await stop()
+
+  const state = store.getState()
+  invalidateInterval(state.interval)
+
+  store.setState(initialState())
 }
 
 function createInterval() {
@@ -175,8 +137,8 @@ function createInterval() {
     const state = store.getState()
     const current = state.queue.at(state.current)
 
-    if (!current) return stop()
-    if (state.elapsed > current.duration) return next()
+    if (!current) return reset() // TODO: observe for issues ? only stop() was needed here
+    if (state.elapsed >= current.duration) return next()
 
     store.setState(state => ({ elapsed: state.elapsed + 1 }))
 
@@ -191,28 +153,47 @@ function invalidateInterval(interval?: Timeout | null) {
   if (interval) clearInterval(interval)
 }
 
+async function playArbitraryTracks(data: Track | Track[]) {
+  await playTracks(Array.isArray(data) ? data : [data])
+  setTemplate('arbitrary')
+}
+
 export async function init() {
   listen<Track>('play-arbitrary-track', async evt => {
-    await playTracks(evt.payload)
-    setTemplate('arbitrary')
+    await playArbitraryTracks(evt.payload)
   })
 
   const tracks = await getArbitraryTracks()
   if (!tracks.length) return
 
-  await playTracks(tracks)
-  setTemplate('arbitrary')
+  await playArbitraryTracks(tracks)
 }
 
-type FindIndexParams = Pick<Store, 'queue' | 'current' | 'repeat'>
+export async function next() {
+  const state = store.getState()
+  const index = getNextIndex(state)
 
-function nextIndex({ queue, current, repeat }: FindIndexParams) {
+  if (index === -1) return await reset()
+  await goto(index)
+}
+
+export async function prev() {
+  const state = store.getState()
+  const index = getPrevIndex(state)
+
+  if (index === -1) return await reset()
+  await goto(index)
+}
+
+type GetIndexParams = Pick<Store, 'queue' | 'current' | 'repeat'>
+
+function getNextIndex({ queue, current, repeat }: GetIndexParams) {
   if (isRepeatCurrent(repeat)) return current
   if (queue.length > current + 1) return current + 1
   return repeat ? 0 : -1
 }
 
-function prevIndex({ queue, current, repeat }: FindIndexParams) {
+function getPrevIndex({ queue, current, repeat }: GetIndexParams) {
   if (isRepeatCurrent(repeat)) return current
   if (current > 0) return current - 1
   return repeat ? queue.length - 1 : -1
@@ -224,6 +205,42 @@ function isRepeatCurrent(repeat: Repeat | null) {
 
 function isEmotionRankingAllowed(template?: Template | null) {
   return !template // || (template[0] !== 'e' && template[0] !== 'a')
+}
+
+export function setTemplate(template: Template | null) {
+  store.setState({ template })
+}
+
+export function setRepeat(repeat: Repeat | null) {
+  store.setState({ repeat })
+}
+
+export async function extendQueue(tracks: Track[]) {
+  const state = store.getState()
+  const queue = state.queue.concat(tracks)
+
+  await setQueue(queue)
+  store.setState({ queue })
+}
+
+async function setQueue(queue: Track[]) {
+  await invoke('player_set_queue', { queue: queue.map(t => t.path) })
+}
+
+async function setCurrent(current: number) {
+  await invoke('player_set_current', { index: current })
+}
+
+async function stop() {
+  await invoke('player_stop')
+}
+
+async function setVolume(volume: number) {
+  await invoke('player_set_volume', { volume })
+}
+
+export async function getArbitraryTracks() {
+  return await invoke<Track[]>('player_get_arbitrary_tracks')
 }
 
 export const onGlobalShortcut: ShortcutHandler = evt => {
@@ -249,14 +266,14 @@ export function usePlayer() {
   const state = useStore(store)
 
   return {
+    setState: store.setState,
     toggleShuffle: state.isShuffled ? unshuffle : shuffle,
-    isRepeatCurrent: isRepeatCurrent(state.repeat),
+    togglePlay: state.isPaused ? play : pause,
     current: state.queue.at(state.current),
-    toggle: state.isPaused ? play : pause,
-    hasPrev: prevIndex(state) !== -1,
-    hasNext: nextIndex(state) !== -1,
+    isRepeatCurrent: isRepeatCurrent(state.repeat),
+    hasPrev: getPrevIndex(state) !== -1,
+    hasNext: getNextIndex(state) !== -1,
     isShuffled: state.isShuffled,
-    currentIndex: state.current,
     isPaused: state.isPaused,
     elapsed: state.elapsed,
     repeat: state.repeat,

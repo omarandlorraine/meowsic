@@ -29,7 +29,7 @@ import { Virtuoso } from 'react-virtuoso'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { useDebounce } from 'use-debounce'
 import { formatTime, getAssetUrl, setMiniPlayerVisibility, useSelection } from '@/utils'
-import { usePlayer } from '@/player'
+import { extendQueue, usePlayer } from '@/player'
 import { createSearchIndex, getTracks, normalizeMeta } from '@/tracks'
 import { addPlaylist, addPlaylistTracks, getPlaylists } from '@/playlists'
 import { SearchBar, SelectAllControls } from '@/components'
@@ -106,7 +106,7 @@ export function TracksScreen() {
               radius="sm"
               variant="flat"
               onPress={async () => {
-                await player.setQueue(player.queue.concat(selection.values))
+                await extendQueue(selection.values)
                 selection.clear()
               }}>
               <ListVideoIcon className="text-lg" /> Add to Queue
@@ -197,7 +197,7 @@ export function TracksScreen() {
             data={item}
             onPlay={onPlay}
             isSelected={selection.isSelected(item)}
-            isPlaying={player.current?.hash === item.hash}
+            isPlaying={player.current === item}
             onToggleSelect={selection.toggle}
             draggableProps={draggableProps}
           />

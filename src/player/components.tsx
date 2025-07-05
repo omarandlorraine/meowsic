@@ -126,7 +126,7 @@ export function Player({ mini }: PlayerProps) {
           variant="flat"
           color="secondary"
           className="size-20"
-          onPress={player.toggle}
+          onPress={player.togglePlay}
           isDisabled={!player.current}>
           {player.isPaused ? <PlayIcon className="text-2xl" /> : <PauseIcon className="text-2xl" />}
         </Button>
