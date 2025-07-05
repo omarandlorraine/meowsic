@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Button, cn } from '@heroui/react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { Link, Outlet, useLocation } from 'react-router'
@@ -10,11 +11,13 @@ import {
   MinusIcon,
   MusicIcon,
   PawPrintIcon,
-  PictureInPicture2Icon,
   SettingsIcon,
+  XIcon,
   SmileIcon,
   UserRoundIcon,
-  XIcon,
+  PictureInPicture2Icon,
+  ChevronsDownUpIcon,
+  ChevronsUpDownIcon,
 } from 'lucide-react'
 import { setMiniPlayerVisibility, setPlayerMaximized, store } from '@/utils'
 import { MiniPlayer } from '@/player/components'
@@ -25,8 +28,10 @@ export function Window() {
   const location = useLocation()
   const currentWindow = getCurrentWindow()
   const { isPlayerMaximized, isMiniPlayerVisible } = useStore(store)
+  const [isMaximized, setIsMaximized] = useState(false)
 
-  const showBars = !isPlayerMaximized || location.pathname !== '/'
+  const isHome = location.pathname === '/'
+  const showBars = !isPlayerMaximized || !isHome
 
   return (
     <>
@@ -36,12 +41,7 @@ export function Window() {
           'flex items-center pointer-events-auto fixed inset-x-0 top-0 z-100 bg-default-50/25 backdrop-blur-lg backdrop-saturate-125',
           !showBars && 'opacity-0 hover:opacity-100 transition-opacity',
         )}>
-        <Button
-          as={Link}
-          to="/"
-          radius="none"
-          className="text-lg px-6"
-          variant={location.pathname === '/' ? 'flat' : 'light'}>
+        <Button as={Link} to="/" radius="none" className="text-lg px-6" variant={isHome ? 'flat' : 'light'}>
           <PawPrintIcon className="text-lg text-secondary-600" /> Meowsic
         </Button>
 
@@ -56,19 +56,28 @@ export function Window() {
           <PictureInPicture2Icon className={cn('text-lg', !isMiniPlayerVisible && 'text-default-500')} />
         </Button>
 
-        {location.pathname === '/' && (
-          <Button
-            isIconOnly
-            radius="none"
-            variant={isPlayerMaximized ? 'flat' : 'light'}
-            color={isPlayerMaximized ? 'secondary' : 'default'}
-            onPress={() => setPlayerMaximized(!isPlayerMaximized)}>
-            <MaximizeIcon className={cn('text-lg', !isPlayerMaximized && 'text-default-500')} />
-          </Button>
-        )}
+        <Button
+          isIconOnly
+          radius="none"
+          variant={isPlayerMaximized ? 'flat' : 'light'}
+          color={isPlayerMaximized ? 'secondary' : 'default'}
+          onPress={() => setPlayerMaximized(!isPlayerMaximized)}>
+          <MaximizeIcon className={cn('text-lg', !isPlayerMaximized && 'text-default-500')} />
+        </Button>
 
         <Button variant="light" radius="none" className="min-w-12" onPress={() => currentWindow.minimize()}>
           <MinusIcon className="text-lg text-default-500" />
+        </Button>
+
+        <Button
+          variant="light"
+          radius="none"
+          className="min-w-12 text-default-500 text-lg"
+          onPress={() => {
+            currentWindow.toggleMaximize()
+            setIsMaximized(!isMaximized)
+          }}>
+          {isMaximized ? <ChevronsDownUpIcon className="rotate-45" /> : <ChevronsUpDownIcon className="rotate-45" />}
         </Button>
 
         <Button
@@ -102,7 +111,7 @@ export function Window() {
         <Outlet />
       </div>
 
-      {isMiniPlayerVisible && location.pathname !== '/' && <MiniPlayer />}
+      {isMiniPlayerVisible && !isHome && <MiniPlayer />}
     </>
   )
 }

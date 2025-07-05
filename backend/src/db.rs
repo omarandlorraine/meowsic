@@ -9,22 +9,23 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 pub struct Db {
+    pub covers_path: PathBuf,
     pool: Pool<Sqlite>,
-    covers_path: PathBuf,
 }
 
 impl Db {
-    pub async fn new(path: impl AsRef<Path>, covers_path: PathBuf) -> Result<Self> {
+    pub fn new(path: impl AsRef<Path>, covers_path: impl Into<PathBuf>) -> Self {
+        let covers_path = covers_path.into();
+
         let options = SqliteConnectOptions::new()
             .filename(path)
             .create_if_missing(true);
 
         let pool = SqlitePoolOptions::new()
             .max_connections(1)
-            .connect_with(options)
-            .await?;
+            .connect_lazy_with(options);
 
-        Ok(Self { pool, covers_path })
+        Self { pool, covers_path }
     }
 
     pub async fn get_tracks(&self, filters: &GetTracksFilters) -> Result<Vec<Track>> {

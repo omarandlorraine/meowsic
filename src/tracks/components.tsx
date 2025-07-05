@@ -75,10 +75,7 @@ export function TracksScreen() {
   }, [query.data])
 
   const onPlay = async (data: Track | Track[]) => {
-    await player.setQueue(Array.isArray(data) ? data : [data])
-    await player.goto(0)
-    await player.play()
-
+    await player.playTracks(data)
     player.setTemplate(null)
     setMiniPlayerVisibility(true)
   }

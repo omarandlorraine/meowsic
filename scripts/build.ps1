@@ -2,25 +2,29 @@
 $originalLocation = Get-Location
 
 # Set up paths
-$projectRoot = (Resolve-Path "$PSScriptRoot/..").Path
-$backendPath = Join-Path $projectRoot "backend"
-$releasePath = Join-Path $projectRoot "release"
-$distPath = Join-Path $projectRoot "dist"
-$binPath = Join-Path $projectRoot "bin"
-$exeName = "meowsic.exe"
+$rootPath = (Resolve-Path "$PSScriptRoot/..").Path
+$backendPath = Join-Path $rootPath "backend"
+$releasePath = Join-Path $rootPath "release"
+$binPath = Join-Path $rootPath "bin"
 
 # Run build
-Set-Location $projectRoot
+Set-Location $rootPath
 pnpm build
 
-# Remove dist folder
-if (Test-Path $distPath) {
-    Remove-Item -Recurse -Force $distPath
+# Read name and version from Cargo.toml
+$cargoTomlPath = Join-Path $backendPath "Cargo.toml"
+$nameLine = Select-String -Path $cargoTomlPath -Pattern '^\s*name\s*=\s*".+"'
+$versionLine = Select-String -Path $cargoTomlPath -Pattern '^\s*version\s*=\s*".+"'
+
+if ($nameLine -match '"([^"]+)"') {
+    $appName = $Matches[1]
+}
+else {
+    Write-Error "Package name not found in Cargo.toml"
+    exit 1
 }
 
-# Get version from Cargo.toml
-$versionLine = Select-String -Path "$backendPath/Cargo.toml" -Pattern '^version\s*=\s*".+"'
-if ($versionLine -match '"(.+)"') {
+if ($versionLine -match '"([^"]+)"') {
     $version = $Matches[1]
 }
 else {
@@ -28,18 +32,30 @@ else {
     exit 1
 }
 
+$exeName = "$appName.exe"
+
 # Paths
 $compiledBinary = Join-Path "$backendPath/target/release" $exeName
-$releaseBinary = Join-Path $releasePath "meowsic-$version.exe"
+$releaseBinary = Join-Path $releasePath "$appName-$version.exe"
 $latestBinary = Join-Path $binPath $exeName
 
-# Ensure output directories exist
+# Ensure output directories
 New-Item -ItemType Directory -Force -Path $releasePath, $binPath | Out-Null
 
-# Copy the binary
+# Copy executables
 Copy-Item -Force -Path $compiledBinary -Destination $releaseBinary
 Copy-Item -Force -Path $compiledBinary -Destination $latestBinary
 
-# Restore original location
+# Copy NSIS installer
+$nsisSource = Join-Path $backendPath "/target/release/bundle/nsis/${appName}_${version}_x64-setup.exe"
+if (Test-Path $nsisSource) {
+    Copy-Item -Force -Path $nsisSource -Destination $releasePath
+}
+else {
+    Write-Warning "NSIS installer not found: $nsisSource"
+}
+
+# Restore original directory
 Set-Location $originalLocation
-Write-Host "Build complete: $releaseBinary and $latestBinary created."
+
+Write-Host "Build complete: $releaseBinary, $latestBinary, and NSIS installer copied to release folder."

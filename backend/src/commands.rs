@@ -60,6 +60,11 @@ pub fn player_set_volume(state: State<AppState, '_>, volume: f32) -> Result<(), 
 }
 
 #[tauri::command]
+pub fn player_get_arbitrary_tracks(state: State<AppState, '_>) -> Result<Vec<Track>, Error> {
+    Ok(state.player.lock().arbitrary_tracks.clone())
+}
+
+#[tauri::command]
 pub async fn db_get_tracks(
     state: State<AppState, '_>,
     filters: GetTracksFilters,
