@@ -126,8 +126,8 @@ export function Player({ mini }: PlayerProps) {
           variant="flat"
           color="secondary"
           className="size-20"
-          onPress={player.togglePlay}
-          isDisabled={!player.current}>
+          isDisabled={!player.current}
+          onPress={player.togglePlay}>
           {player.isPaused ? <PlayIcon className="text-2xl" /> : <PauseIcon className="text-2xl" />}
         </Button>
 
@@ -138,6 +138,7 @@ export function Player({ mini }: PlayerProps) {
         <Button
           isIconOnly
           radius="full"
+          isDisabled={!player.current}
           variant={player.isShuffled ? 'flat' : 'light'}
           color={player.isShuffled ? 'warning' : 'default'}
           onPress={player.toggleShuffle}>

@@ -11,6 +11,7 @@
 - [ ] optimizations (memo, etc.)
 - [ ] toolips and guides
 - [ ] playlist export
+- [ ] smoother seekbar
 - [x] shuffle and repeat controls
 - [x] tauri security (csp for assets, etc.)
 - [x] remove web elements like selection and context menu
