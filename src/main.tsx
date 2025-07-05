@@ -2,9 +2,11 @@ import './styles.css'
 
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createBrowserRouter, RouterProvider } from 'react-router'
 import { applyTheme } from '@/utils'
+import { init as initPlayer } from '@/player'
 import { Window } from '@/components/window'
 import { HomeScreen } from '@/components/home'
 import { TracksScreen } from '@/tracks/components'
@@ -14,6 +16,8 @@ import { QueueScreen } from '@/queue'
 import { AlbumsScreen } from '@/albums'
 import { ArtistsScreen } from '@/artists'
 import { SettingsScreen } from '@/settings'
+
+const currentWindow = getCurrentWindow()
 
 const router = createBrowserRouter([
   {
@@ -49,3 +53,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 )
 
 applyTheme()
+initPlayer()
+
+try {
+  await currentWindow.show()
+  await currentWindow.setFocus()
+} catch (err) {
+  await currentWindow.close()
+}

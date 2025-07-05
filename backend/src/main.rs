@@ -7,38 +7,39 @@ mod player;
 mod tracks;
 mod utils;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use db::Db;
 use parking_lot::Mutex;
 use player::Player;
 use rodio::{OutputStream, Sink};
 use serde::Serialize;
 use std::sync::Arc;
-use tauri::Manager;
+use tauri::{Builder, Emitter, Manager};
 use tauri_plugin_http::reqwest::Client as HttpClient;
+use tokio::runtime::Handle as RuntimeHandle;
+use tracks::Track;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let exe_path = std::env::current_exe()?
-        .parent()
-        .context("failed to get exe path")?
-        .to_path_buf();
-
-    // ! DO NOT DROP _stream (don't assign to just '_')
-    let (_stream, handle) = OutputStream::try_default()?;
+    let (_stream, handle) = OutputStream::try_default()?; // ! DO NOT DROP _stream (don't assign to just '_')
     let sink = Sink::try_new(&handle)?;
     let player = Arc::new(Mutex::new(Player::new(sink)?));
 
-    let user_agent = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
-    let http_client = HttpClient::builder().user_agent(user_agent).build()?;
-
-    let mut builder = tauri::Builder::default();
+    let mut builder = Builder::default();
 
     #[cfg(desktop)]
     {
-        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _, _| {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, _| {
             if let Some(window) = app.get_webview_window("main") {
                 _ = window.set_focus();
+            }
+
+            if let Some(path) = args.get(1) {
+                let state = app.state::<AppState>();
+
+                if let Ok(track) = Track::new(path, &state.db.covers_path) {
+                    _ = app.emit("play-arbitrary-track", track);
+                }
             }
         }));
     }
@@ -48,17 +49,38 @@ async fn main() -> Result<()> {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
-        // .manage(state)
-        .setup(|app| {
-            let db = Db::new(exe_path.join("meowsic.db"), exe_path.join("covers"));
+        .setup(move |app| {
+            let tauri::Config {
+                product_name,
+                version,
+                ..
+            } = app.config();
 
-            tokio::spawn
+            let name = product_name.as_deref().unwrap_or(env!("CARGO_PKG_NAME"));
+            let version = version.as_deref().unwrap_or(env!("CARGO_PKG_VERSION"));
+            let data_path = app.path().document_dir()?.join(name);
 
-            let state = AppState {
+            let http_client = HttpClient::builder()
+                .user_agent(format!("{name}/{version}"))
+                .build()?;
+
+            let covers_path = data_path.join("covers");
+            let db = Db::new(data_path.join(format!("{name}.db")), &covers_path);
+
+            // could always do this from UI side but, oh well
+            tokio::task::block_in_place(|| RuntimeHandle::current().block_on(db.init()))?;
+
+            if let Some(path) = std::env::args().nth(1) {
+                if let Ok(track) = Track::new(path, &covers_path) {
+                    player.lock().arbitrary_tracks.push(track);
+                }
+            }
+
+            app.manage(AppState {
                 http_client,
                 player,
                 db,
-            };
+            });
 
             Ok(())
         })
@@ -74,6 +96,7 @@ async fn main() -> Result<()> {
             commands::player_set_current,
             commands::player_is_paused,
             commands::player_set_volume,
+            commands::player_get_arbitrary_tracks,
             commands::db_get_tracks,
             commands::db_get_playlists,
             commands::db_add_playlist,

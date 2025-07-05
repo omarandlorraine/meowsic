@@ -6,14 +6,18 @@
     "beforeDevCommand": "pnpm vite:dev",
     "beforeBuildCommand": "pnpm vite:build",
     "devUrl": "http://localhost:1420",
-    "frontendDist": "../dist"
+    "frontendDist": "../build"
   },
   "bundle": {
     "active": true,
     "icon": ["icons/icon.ico"],
-    "windows": {
-      "nsis": null
-    }
+    "fileAssociations": [
+      {
+        "name": "Meowsic Audio File",
+        "description": "Meowsic Audio File",
+        "ext": ["mp3", "m4a", "flac", "wav", "ogg", "opus", "aac", "aiff"]
+      }
+    ]
   },
   "app": {
     "windows": [
@@ -24,7 +28,7 @@
         "width": 1600,
         "height": 900,
         "center": true,
-        "maximized": true
+        "visible": false
       }
     ],
     "security": {

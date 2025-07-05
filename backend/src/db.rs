@@ -9,12 +9,14 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 pub struct Db {
+    pub covers_path: PathBuf,
     pool: Pool<Sqlite>,
-    covers_path: PathBuf,
 }
 
 impl Db {
-    pub fn new(path: impl AsRef<Path>, covers_path: PathBuf) -> Self {
+    pub fn new(path: impl AsRef<Path>, covers_path: impl Into<PathBuf>) -> Self {
+        let covers_path = covers_path.into();
+
         let options = SqliteConnectOptions::new()
             .filename(path)
             .create_if_missing(true);

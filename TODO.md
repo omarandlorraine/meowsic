@@ -7,13 +7,15 @@
 - [ ] lyrics manager
 - [ ] assets manager
 - [ ] unsupported audio fallback
-- [ ] open with
 - [ ] toasts
 - [ ] animations
 - [ ] logo
 - [ ] optimizations (memo, etc.)
 - [ ] remove web elements like selection and navigations
 - [ ] tauri security (csp for assets, etc.)
+- [ ] toolips and guides
+- [x] installer
+- [x] open with
 - [x] emotion ranking
 - [x] search
 - [x] better import fonts

@@ -1,3 +1,4 @@
+use crate::tracks::Track;
 use anyhow::{Result, anyhow};
 use rodio::{Decoder, Sink};
 use std::fs::File;
@@ -10,6 +11,7 @@ pub struct Player {
     current: usize,
     pub queue: Vec<PathBuf>,
     looping: bool,
+    pub arbitrary_tracks: Vec<Track>,
 }
 
 impl Player {
@@ -21,6 +23,7 @@ impl Player {
             current: 0,
             queue: vec![],
             looping: false,
+            arbitrary_tracks: vec![],
         })
     }
 

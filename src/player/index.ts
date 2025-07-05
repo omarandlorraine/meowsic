@@ -1,10 +1,11 @@
 import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import { createStore, useStore } from 'zustand'
-import type { Track } from '@/tracks'
 import { rankUp } from '@/emotions'
+import type { Track } from '@/tracks'
 
 type Timeout = ReturnType<typeof setInterval>
-type Template = 'emotions'
+type Template = 'emotions' | 'arbitrary'
 
 type Store = {
   queue: Track[]
@@ -117,8 +118,18 @@ export async function setVolume(volume: number) {
   store.setState({ volume })
 }
 
+export async function getArbitraryTracks() {
+  return await invoke<Track[]>('player_get_arbitrary_tracks')
+}
+
 export function setTemplate(template: Template | null) {
   store.setState({ template })
+}
+
+export async function playTracks(data: Track | Track[]) {
+  await setQueue(Array.isArray(data) ? data : [data])
+  await goto(0)
+  await play()
 }
 
 function createInterval() {
@@ -131,16 +142,32 @@ function createInterval() {
 
     store.setState(state => ({ elapsed: state.elapsed + 1 }))
 
-    // since only 'emotions' are denied from ranking up
     // n seconds before the end, not awaiting the promise
-    if (!state.template && current.duration - state.elapsed === 10) {
+    if (isEmotionRankingAllowed(state.template) && current.duration - state.elapsed === 10) {
       rankUp(current)
     }
   }, 1000)
 }
 
+function isEmotionRankingAllowed(template?: Template | null) {
+  return !template // || (template[0] !== 'e' && template[0] !== 'a')
+}
+
 function invalidateInterval(interval?: Timeout | null) {
   if (interval) clearInterval(interval)
+}
+
+export async function init() {
+  listen<Track>('play-arbitrary-track', async evt => {
+    await playTracks(evt.payload)
+    setTemplate('arbitrary')
+  })
+
+  const tracks = await getArbitraryTracks()
+  if (!tracks.length) return
+
+  await playTracks(tracks)
+  setTemplate('arbitrary')
 }
 
 export function usePlayer() {
@@ -172,5 +199,6 @@ export function usePlayer() {
     hasPrev,
     looping,
     setTemplate,
+    playTracks,
   }
 }
