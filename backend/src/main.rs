@@ -14,6 +14,7 @@ use player::Player;
 use rodio::{OutputStream, Sink};
 use serde::Serialize;
 use std::sync::Arc;
+use tauri::Manager;
 use tauri_plugin_http::reqwest::Client as HttpClient;
 
 #[tokio::main]
@@ -26,27 +27,41 @@ async fn main() -> Result<()> {
     // ! DO NOT DROP _stream (don't assign to just '_')
     let (_stream, handle) = OutputStream::try_default()?;
     let sink = Sink::try_new(&handle)?;
-
     let player = Arc::new(Mutex::new(Player::new(sink)?));
-    let db = Db::new(exe_path.join("meowsic.db"), exe_path.join("covers")).await?;
 
     let user_agent = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
     let http_client = HttpClient::builder().user_agent(user_agent).build()?;
 
-    db.init().await?;
+    let mut builder = tauri::Builder::default();
 
-    let state = AppState {
-        http_client,
-        player,
-        db,
-    };
+    #[cfg(desktop)]
+    {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _, _| {
+            if let Some(window) = app.get_webview_window("main") {
+                _ = window.set_focus();
+            }
+        }));
+    }
 
-    tauri::Builder::default()
+    builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
-        .manage(state)
+        // .manage(state)
+        .setup(|app| {
+            let db = Db::new(exe_path.join("meowsic.db"), exe_path.join("covers"));
+
+            tokio::spawn
+
+            let state = AppState {
+                http_client,
+                player,
+                db,
+            };
+
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::player_set_queue,
             commands::player_goto,
