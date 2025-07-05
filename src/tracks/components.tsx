@@ -102,7 +102,13 @@ export function TracksScreen() {
               <PlayIcon className="text-lg" /> Play
             </Button>
 
-            <Button radius="sm" variant="flat">
+            <Button
+              radius="sm"
+              variant="flat"
+              onPress={async () => {
+                await player.setQueue(player.queue.concat(selection.values))
+                selection.clear()
+              }}>
               <ListVideoIcon className="text-lg" /> Add to Queue
             </Button>
 

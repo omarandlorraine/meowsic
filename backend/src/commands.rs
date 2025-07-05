@@ -15,16 +15,6 @@ pub fn player_goto(state: State<AppState, '_>, index: usize) -> Result<(), Error
 }
 
 #[tauri::command]
-pub fn player_next(state: State<AppState, '_>) -> Result<(), Error> {
-    Ok(state.player.lock().next()?)
-}
-
-#[tauri::command]
-pub fn player_prev(state: State<AppState, '_>) -> Result<(), Error> {
-    Ok(state.player.lock().prev()?)
-}
-
-#[tauri::command]
 pub fn player_seek(state: State<AppState, '_>, elapsed: u64) -> Result<(), Error> {
     Ok(state.player.lock().seek(elapsed)?)
 }

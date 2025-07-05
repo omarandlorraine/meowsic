@@ -3,7 +3,6 @@
 ## Features
 
 - [ ] shuffle and repeat controls
-- [ ] hw keybinds
 - [ ] lyrics manager
 - [ ] assets manager
 - [ ] unsupported audio fallback
@@ -11,9 +10,11 @@
 - [ ] animations
 - [ ] logo
 - [ ] optimizations (memo, etc.)
-- [ ] remove web elements like selection and navigations
-- [ ] tauri security (csp for assets, etc.)
 - [ ] toolips and guides
+- [ ] playlist export
+- [x] tauri security (csp for assets, etc.)
+- [x] remove web elements like selection and context menu
+- [x] hw keybinds (media controls)
 - [x] installer
 - [x] open with
 - [x] emotion ranking
@@ -24,4 +25,4 @@
 ## Fixes
 
 - [ ] error handling
-- [ ] `Add to Queue` won't work under Tracks
+- [x] `Add to Queue` won't work under Tracks

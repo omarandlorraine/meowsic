@@ -13,18 +13,12 @@ export function QueueScreen() {
   const onRemove = async () => {
     if (!player.current) return
 
-    const reset = async () => {
-      await player.setQueue([])
-      await player.setCurrent(0)
-      await player.stop()
-    }
-
-    if (!selection.values.length) return reset()
+    if (!selection.values.length) return player.reset()
 
     const filtered = player.queue.filter(track => !selection.isSelected(track))
     const newIndex = filtered.findIndex(track => track === player.current) // compare by reference
 
-    if (!filtered.length) reset()
+    if (!filtered.length) player.reset()
     else {
       await player.setQueue(filtered)
 

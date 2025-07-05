@@ -42,6 +42,8 @@ async fn main() -> Result<()> {
                 }
             }
         }));
+
+        builder = builder.plugin(tauri_plugin_global_shortcut::Builder::new().build());
     }
 
     builder
@@ -87,8 +89,6 @@ async fn main() -> Result<()> {
         .invoke_handler(tauri::generate_handler![
             commands::player_set_queue,
             commands::player_goto,
-            commands::player_next,
-            commands::player_prev,
             commands::player_seek,
             commands::player_stop,
             commands::player_play,

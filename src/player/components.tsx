@@ -6,6 +6,7 @@ import {
   PauseIcon,
   PictureInPicture2Icon,
   PlayIcon,
+  Repeat1Icon,
   RepeatIcon,
   ShuffleIcon,
   SkipBackIcon,
@@ -101,8 +102,18 @@ export function Player({ mini }: PlayerProps) {
       </div>
 
       <div className="flex w-full items-center justify-center gap-3">
-        <Button isIconOnly isDisabled radius="full" variant="light">
-          <RepeatIcon className="text-lg" />
+        <Button
+          isIconOnly
+          radius="full"
+          isDisabled={!player.current}
+          variant={player.repeat ? 'flat' : 'light'}
+          color={player.isRepeatCurrent ? 'warning' : 'default'}
+          onPress={() => {
+            if (!player.repeat) player.setRepeat('all')
+            else if (player.isRepeatCurrent) player.setRepeat(null)
+            else player.setRepeat('current')
+          }}>
+          {player.isRepeatCurrent ? <Repeat1Icon className="text-lg" /> : <RepeatIcon className="text-lg" />}
         </Button>
 
         <Button isIconOnly radius="full" variant="light" size="lg" onPress={player.prev} isDisabled={!player.hasPrev}>
@@ -124,7 +135,12 @@ export function Player({ mini }: PlayerProps) {
           <SkipForwardIcon className="text-xl" />
         </Button>
 
-        <Button isIconOnly isDisabled radius="full" variant="light">
+        <Button
+          isIconOnly
+          radius="full"
+          variant={player.isShuffled ? 'flat' : 'light'}
+          color={player.isShuffled ? 'warning' : 'default'}
+          onPress={player.toggleShuffle}>
           <ShuffleIcon className="text-lg" />
         </Button>
       </div>

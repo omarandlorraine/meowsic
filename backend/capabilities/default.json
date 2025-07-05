@@ -17,11 +17,12 @@
     "core:window:allow-maximize",
     "core:window:allow-set-focus",
     "core:window:allow-set-resizable",
-    "core:window:allow-toggle-maximize",    
+    "core:window:allow-toggle-maximize",
     "core:webview:allow-create-webview-window",
     "core:app:allow-default-window-icon",
     "store:default",
     "dialog:default",
+    "global-shortcut:allow-register",
     {
       "identifier": "http:default",
       "allow": [{ "url": "*" }]

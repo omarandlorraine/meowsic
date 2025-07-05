@@ -10,7 +10,6 @@ pub struct Player {
     sink: Sink,
     current: usize,
     pub queue: Vec<PathBuf>,
-    looping: bool,
     pub arbitrary_tracks: Vec<Track>,
 }
 
@@ -22,7 +21,6 @@ impl Player {
             sink,
             current: 0,
             queue: vec![],
-            looping: false,
             arbitrary_tracks: vec![],
         })
     }
@@ -33,40 +31,6 @@ impl Player {
         let source = Decoder::new(reader)?;
 
         self.sink.append(source);
-
-        Ok(())
-    }
-
-    pub fn prev(&mut self) -> Result<()> {
-        if self.current == 0 {
-            if self.looping {
-                self.current = self.queue.len() - 1;
-            } else {
-                return Ok(());
-            }
-        } else {
-            self.current -= 1;
-        }
-
-        self.stop();
-        self.load()?;
-
-        Ok(())
-    }
-
-    pub fn next(&mut self) -> Result<()> {
-        if self.current == self.queue.len() - 1 {
-            if self.looping {
-                self.current = 0;
-            } else {
-                return Ok(());
-            }
-        } else {
-            self.current += 1;
-        }
-
-        self.stop();
-        self.load()?;
 
         Ok(())
     }
@@ -102,8 +66,8 @@ impl Player {
     }
 
     pub fn set_current(&mut self, index: usize) -> Result<()> {
-        if index > self.queue.len() {
-            // ? 0 is allowed as a valid default index
+        // ? 0 is allowed as a valid default index
+        if index >= self.queue.len() {
             Err(anyhow!("Index out of bounds"))
         } else if index == self.current {
             Ok(())
