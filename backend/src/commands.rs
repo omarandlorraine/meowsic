@@ -162,7 +162,7 @@ pub async fn db_get_artists(state: State<AppState, '_>) -> Result<Vec<String>, E
 }
 
 #[tauri::command]
-pub async fn db_scan_dirs(state: State<AppState, '_>) -> Result<(), Error> {
+pub async fn db_scan_dirs(state: State<AppState, '_>) -> Result<String, Error> {
     Ok(state.db.scan_dirs(&state.db.get_dirs().await?).await?)
 }
 

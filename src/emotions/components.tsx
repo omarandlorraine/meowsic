@@ -15,7 +15,7 @@ import {
   DropdownTrigger,
 } from '@heroui/react'
 import { CheckIcon, PlayIcon, SmileIcon } from 'lucide-react'
-import { DEFAULT_EMOTION, store, setEmotion, setMiniPlayerVisibility } from '@/settings'
+import { DEFAULT_EMOTION, store, setEmotion, setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
 import { usePlayer } from '@/player'
 import { getEmotions, getEmotionTracks } from '@/emotions'
 import { createSearchIndex } from '@/tracks'
@@ -65,6 +65,8 @@ export function EmotionScreen() {
   const onPlay = async (data: Track | Track[]) => {
     await player.playTracks(data)
     player.setTemplate('emotions')
+
+    setPlayerMaximized(true)
     setMiniPlayerVisibility(true)
   }
 

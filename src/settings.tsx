@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Select, SelectItem, Slider } from '@heroui/react'
+import { addToast, Button, Select, SelectItem, Slider } from '@heroui/react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
@@ -14,7 +14,18 @@ export const DEFAULT_EMOTION = 'Neutral'
 
 export function SettingsScreen() {
   const queryDirs = useQuery({ queryKey: ['dirs'], queryFn: getDirs })
-  const mutationScan = useMutation({ mutationFn: scanDirs })
+
+  const mutationScan = useMutation({
+    mutationFn: scanDirs,
+    onSuccess: result => {
+      addToast({
+        timeout: 5000,
+        title: 'Folders Scanned',
+        description: result,
+        color: result.startsWith('[ERR]') ? 'danger' : 'success',
+      })
+    },
+  })
 
   const state = useStore(store)
   const [fontSize, setFontSize] = useState(state.fontSize)
@@ -100,7 +111,7 @@ export function SettingsScreen() {
 }
 
 async function scanDirs() {
-  return await invoke('db_scan_dirs')
+  return await invoke<string>('db_scan_dirs')
 }
 
 async function setDirs(dirs: string[]) {

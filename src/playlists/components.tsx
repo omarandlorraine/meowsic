@@ -5,7 +5,7 @@ import { useDebounce } from 'use-debounce'
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, Input, useDisclosure } from '@heroui/react'
 import { CheckIcon, MoveRightIcon, PlayIcon, PlusIcon, SquarePenIcon, Trash2Icon } from 'lucide-react'
 import { reorder, isEditorOfType } from '@/utils'
-import { setMiniPlayerVisibility } from '@/settings'
+import { setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
 import { usePlayer } from '@/player'
 import {
   addPlaylist,
@@ -79,6 +79,8 @@ export function PlaylistScreen() {
   const onPlay = async (data: Track | Track[]) => {
     await player.playTracks(data)
     player.setTemplate(null)
+
+    setPlayerMaximized(true)
     setMiniPlayerVisibility(true)
   }
 

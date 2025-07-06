@@ -1,6 +1,9 @@
+import { useEffect } from 'react'
+import { useStore } from 'zustand'
 import { Checkbox, Chip, Input } from '@heroui/react'
 import { SearchIcon } from 'lucide-react'
 import { Player } from '@/player/components'
+import { setPlayerMaximized, store } from '@/settings'
 import type { UseSelection } from '@/utils'
 
 type SearchBarProps = { value: string; onChange: (value: string) => void; className?: string }
@@ -52,6 +55,18 @@ export function SelectAllControls<T>({ selection, data }: SelectAllControlsProps
 }
 
 export function HomeScreen() {
+  const isPlayerMaximized = useStore(store, state => state.isPlayerMaximized)
+
+  // TODO: probably use react-hotkeys later
+  useEffect(() => {
+    const listener = (evt: KeyboardEvent) => {
+      if (evt.key === 'Escape' && isPlayerMaximized) setPlayerMaximized(false)
+    }
+
+    document.addEventListener('keydown', listener)
+    return () => document.removeEventListener('keydown', listener)
+  }, [isPlayerMaximized])
+
   return (
     <div className="p-3 pt-[calc(theme(spacing.10)+theme(spacing.1))] w-full">
       <Player />

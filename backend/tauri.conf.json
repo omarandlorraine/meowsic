@@ -12,11 +12,14 @@
     "active": true,
     "icon": ["icons/icon.ico"],
     "fileAssociations": [
-      {
-        "name": "Meowsic Audio File",
-        "description": "Meowsic Audio File",
-        "ext": ["mp3", "m4a", "flac", "wav", "ogg", "opus", "aac", "aiff"]
-      }
+      { "ext": ["mp3"] },
+      { "ext": ["m4a"] },
+      { "ext": ["flac"] },
+      { "ext": ["wav"] },
+      { "ext": ["ogg"] },
+      { "ext": ["opus"] },
+      { "ext": ["aac"] },
+      { "ext": ["aiff"] }
     ]
   },
   "app": {

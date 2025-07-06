@@ -1,6 +1,7 @@
 import { useLayoutEffect, useState } from 'react'
+import { useNavigate } from 'react-router'
 import { useStore } from 'zustand'
-import { Button, cn, Image, Slider } from '@heroui/react'
+import { Button, cn, Image, Slider, Tooltip } from '@heroui/react'
 import {
   Disc3Icon,
   PauseIcon,
@@ -11,6 +12,7 @@ import {
   ShuffleIcon,
   SkipBackIcon,
   SkipForwardIcon,
+  SquareArrowOutUpLeftIcon,
   UserRoundIcon,
   XIcon,
 } from 'lucide-react'
@@ -40,7 +42,7 @@ export function Player({ mini }: PlayerProps) {
 
       {mini ? (
         <div className="flex w-full px-8 gap-3">
-          <Cover url={player.current?.cover} className="size-40" />
+          <Cover url={player.current?.cover} className="size-40 shrink-0" />
 
           <div className="flex flex-col gap-2">
             {meta.title && <div className="text-large mr-auto">{meta.title}</div>}
@@ -88,6 +90,7 @@ export function Player({ mini }: PlayerProps) {
           value={progress}
           maxValue={player.current?.duration ?? -1}
           onChange={setProgress}
+          isDisabled={!player.current || !!player.error}
           onChangeEnd={value => {
             if (typeof value === 'number') {
               player.seek(value)
@@ -121,16 +124,24 @@ export function Player({ mini }: PlayerProps) {
           <SkipBackIcon className="text-xl" />
         </Button>
 
-        <Button
-          isIconOnly
-          radius="full"
-          variant="flat"
-          color="secondary"
-          className="size-20"
-          isDisabled={!player.current}
-          onPress={player.togglePlay}>
-          {player.isPaused ? <PlayIcon className="text-2xl" /> : <PauseIcon className="text-2xl" />}
-        </Button>
+        <div className="relative">
+          {player.error && (
+            <Tooltip size="sm" radius="sm" className="bg-danger-100" content={player.error?.message}>
+              <div className="absolute inset-0 rounded-full" />
+            </Tooltip>
+          )}
+
+          <Button
+            isIconOnly
+            radius="full"
+            variant="flat"
+            className="size-20"
+            color={player.error ? 'danger' : 'secondary'}
+            isDisabled={!player.current || !!player.error}
+            onPress={player.togglePlay}>
+            {player.isPaused ? <PlayIcon className="text-2xl" /> : <PauseIcon className="text-2xl" />}
+          </Button>
+        </div>
 
         <Button isIconOnly radius="full" variant="light" size="lg" onPress={player.next} isDisabled={!player.hasNext}>
           <SkipForwardIcon className="text-xl" />
@@ -151,13 +162,19 @@ export function Player({ mini }: PlayerProps) {
 }
 
 export function MiniPlayer() {
+  const navigate = useNavigate()
+
   return (
     <div
       className="fixed w-160 flex flex-col bottom-6 right-6 border border-default/30
       bg-background/25 backdrop-blur-lg z-50 rounded-small shadow-small overflow-hidden">
-      <div className="flex items-center justify-between p-2 z-10">
+      <div className="flex items-center p-2 z-10 gap-1">
         <PictureInPicture2Icon className="text-lg text-default-300 ml-2" />
-        {/* <GripHorizontalIcon className="text-lg text-default-300" /> */}
+
+        {/* // TODO: animate expansion */}
+        <Button isIconOnly size="sm" radius="sm" variant="light" className="ml-auto" onPress={() => navigate('/')}>
+          <SquareArrowOutUpLeftIcon className="text-lg text-default-500" />
+        </Button>
 
         <Button
           isIconOnly

@@ -62,8 +62,9 @@ impl Db {
         Ok(tracks)
     }
 
-    pub async fn scan_dirs(&self, dirs: &[impl AsRef<Path>]) -> Result<()> {
-        let tracks = tracks::scan(&dirs, &self.covers_path)?;
+    pub async fn scan_dirs(&self, dirs: &[impl AsRef<Path>]) -> Result<String> {
+        let (tracks, errors) = tracks::scan(&dirs, &self.covers_path)?;
+        let total = tracks.len() + errors.len();
 
         let mut qb = QueryBuilder::new(
             "INSERT INTO tracks 
@@ -91,7 +92,12 @@ impl Db {
         qb.build().execute(&mut *tx).await?;
         tx.commit().await?;
 
-        Ok(())
+        // simple result format to show in the UI
+        Ok(format!(
+            "{}\n\nScanned {total} tracks with {} errors.",
+            errors.join("\n"),
+            errors.len(),
+        ))
     }
 
     pub async fn get_playlists(&self) -> Result<Vec<String>> {

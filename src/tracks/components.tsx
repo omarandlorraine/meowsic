@@ -29,7 +29,7 @@ import { Virtuoso } from 'react-virtuoso'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { useDebounce } from 'use-debounce'
 import { formatTime, getAssetUrl, useSelection } from '@/utils'
-import { setMiniPlayerVisibility } from '@/settings'
+import { setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
 import { extendQueue, usePlayer } from '@/player'
 import { createSearchIndex, getTracks, normalizeMeta } from '@/tracks'
 import { addPlaylist, addPlaylistTracks, getPlaylists } from '@/playlists'
@@ -78,6 +78,8 @@ export function TracksScreen() {
   const onPlay = async (data: Track | Track[]) => {
     await player.playTracks(data)
     player.setTemplate(null)
+
+    setPlayerMaximized(true)
     setMiniPlayerVisibility(true)
   }
 
@@ -431,13 +433,3 @@ export function useTrackSelection() {
 function parseFilters(params: URLSearchParams) {
   return { album: params.get('album'), artist: params.get('artist') }
 }
-
-// Virtuoso's resize observer can throw this error, which is caught by DnD and aborts dragging.
-window.addEventListener('error', evt => {
-  if (
-    evt.message === 'ResizeObserver loop completed with undelivered notifications.' ||
-    evt.message === 'ResizeObserver loop limit exceeded'
-  ) {
-    evt.stopImmediatePropagation()
-  }
-})

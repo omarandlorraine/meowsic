@@ -2,8 +2,10 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { createStore, useStore } from 'zustand'
 import { rankUp } from '@/emotions'
+import { setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
 import type { ShortcutHandler } from '@tauri-apps/plugin-global-shortcut'
 import type { Track } from '@/tracks'
+import { addToast } from '@heroui/react'
 
 type Timeout = ReturnType<typeof setInterval>
 type Template = 'emotions' | 'arbitrary'
@@ -21,7 +23,7 @@ type Store = {
   isShuffled: boolean
   // backup queue for reverting shuffle
   backupQueue: Track[]
-  // volume: number // TODO: should be persistent
+  error?: Error | null
 }
 
 function initialState(): Store {
@@ -46,10 +48,19 @@ export async function goto(index: number) {
   const state = store.getState()
   if (!state.isPaused) invalidateInterval(state.interval)
 
-  await invoke('player_goto', { index })
-  const interval = !state.isPaused ? createInterval() : null
+  try {
+    await invoke('player_goto', { index })
+    const interval = !state.isPaused ? createInterval() : null
 
-  store.setState({ current: index, elapsed: 0, interval })
+    store.setState({ current: index, elapsed: 0, interval, error: null })
+  } catch (err) {
+    console.error(err)
+
+    const error = err as Error // since backend response have similar type
+    store.setState({ current: index, elapsed: 0, error })
+
+    addToast({ timeout: 5000, title: 'Track', description: error.message, color: 'danger' })
+  }
 }
 
 export async function seek(elapsed: number) {
@@ -64,7 +75,7 @@ export async function seek(elapsed: number) {
 
 export async function pause() {
   const state = store.getState()
-  if (state.isPaused) return
+  if (state.isPaused || state.error) return
 
   invalidateInterval(state.interval)
   await invoke('player_pause')
@@ -74,7 +85,7 @@ export async function pause() {
 
 export async function play() {
   const state = store.getState()
-  if (!state.isPaused) return
+  if (!state.isPaused || state.error) return
 
   await invoke('player_play')
   const interval = createInterval()
@@ -156,6 +167,9 @@ function invalidateInterval(interval?: Timeout | null) {
 async function playArbitraryTracks(data: Track | Track[]) {
   await playTracks(Array.isArray(data) ? data : [data])
   setTemplate('arbitrary')
+
+  setPlayerMaximized(true)
+  setMiniPlayerVisibility(true)
 }
 
 export async function init() {
@@ -259,6 +273,7 @@ export function usePlayer() {
     elapsed: state.elapsed,
     repeat: state.repeat,
     queue: state.queue,
+    error: state.error,
     setTemplate,
     setCurrent,
     playTracks,

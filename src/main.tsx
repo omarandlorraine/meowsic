@@ -1,11 +1,23 @@
 import './styles.css'
 
+window.addEventListener('error', evt => {
+  // case: Virtuoso's resize observer can throw this error,
+  // which is caught by DnD and aborts dragging.
+  if (
+    evt.message === 'ResizeObserver loop completed with undelivered notifications.' ||
+    evt.message === 'ResizeObserver loop limit exceeded'
+  ) {
+    evt.stopImmediatePropagation()
+  }
+})
+
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createBrowserRouter, RouterProvider } from 'react-router'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { register } from '@tauri-apps/plugin-global-shortcut'
+import { ToastProvider } from '@heroui/react'
 import { init as initPlayer, onGlobalShortcut as onPlayerGlobalShortcut } from '@/player'
 import { Window } from '@/components/window'
 import { HomeScreen } from '@/components'
@@ -44,21 +56,27 @@ const queryClient = new QueryClient({
   },
 })
 
+await initSettings()
+await initPlayer()
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
+
+      <ToastProvider
+        toastOffset={40}
+        placement="top-center"
+        toastProps={{ radius: 'sm', classNames: { description: 'whitespace-pre-wrap pt-2' } }}
+      />
     </QueryClientProvider>
   </React.StrictMode>,
 )
 
-await initSettings()
-await initPlayer()
-
 try {
   await currentWindow.show()
   await currentWindow.setFocus()
-} catch (err) {
+} catch {
   await currentWindow.close()
 }
 

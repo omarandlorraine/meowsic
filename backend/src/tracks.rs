@@ -139,10 +139,14 @@ impl Track {
     }
 }
 
-pub fn scan(dirs: &[impl AsRef<Path>], covers_path: impl AsRef<Path>) -> Result<Vec<Track>> {
+pub fn scan(
+    dirs: &[impl AsRef<Path>],
+    covers_path: impl AsRef<Path>,
+) -> Result<(Vec<Track>, Vec<String>)> {
     const SUPPORTED: &[&str] = &["mp3", "m4a", "flac", "wav", "ogg", "opus", "aac", "aiff"];
 
     let mut tracks = Vec::new();
+    let mut errors = Vec::new();
 
     for dir in dirs {
         for entry in WalkDir::new(dir)
@@ -160,13 +164,15 @@ pub fn scan(dirs: &[impl AsRef<Path>], covers_path: impl AsRef<Path>) -> Result<
                 continue;
             }
 
-            if let Ok(track) = Track::new(path, &covers_path) {
-                tracks.push(track);
+            match Track::new(path, &covers_path) {
+                Ok(track) => tracks.push(track),
+                // simple error format to show in the UI
+                Err(err) => errors.push(format!("[ERR] {} : {err}", path.display())),
             }
         }
     }
 
-    Ok(tracks)
+    Ok((tracks, errors))
 }
 
 impl From<TrackRow> for Track {
