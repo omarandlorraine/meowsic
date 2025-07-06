@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import {
   Button,
@@ -20,6 +20,7 @@ import {
   GripVerticalIcon,
   ListMusicIcon,
   ListVideoIcon,
+  MoveLeftIcon,
   MusicIcon,
   PlayIcon,
   PlusIcon,
@@ -151,6 +152,12 @@ export function TracksScreen() {
           </>
         ) : (
           <>
+            {(album || artist) && (
+              <Button as={Link} isIconOnly radius="sm" variant="flat" to={album ? '/albums' : '/artists'}>
+                <MoveLeftIcon className="text-lg" />
+              </Button>
+            )}
+
             <Button
               radius="sm"
               variant="flat"

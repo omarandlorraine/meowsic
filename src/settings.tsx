@@ -21,7 +21,7 @@ export function SettingsScreen() {
       addToast({
         timeout: 5000,
         title: 'Folders Scanned',
-        description: result,
+        description: result.trim(),
         color: result.startsWith('[ERR]') ? 'danger' : 'success',
       })
     },

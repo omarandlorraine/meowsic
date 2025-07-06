@@ -2,17 +2,22 @@
 
 ## Features
 
+- [ ] track details screen
 - [ ] unsupported audio fallback
 - [ ] lyrics manager
 - [ ] assets manager
 - [ ] animations
 - [ ] smoother seekbar
-- [ ] logo
-- [ ] playlist export
-- [ ] guides
+- [ ] persist list position
+- [ ] external media playback
 - [ ] better screen size support
-- [-] optimizations (memo, etc.)
-- [-] toolips and toasts
+- [ ] optimization of grid by arranging grid cols as fixed height rows
+- [ ] optimizations (memo, etc.)
+- [ ] playlist export
+- [ ] logo
+- [ ] guides
+- [ ] toolips and toasts
+- [ ] layout customization
 - [x] volume controls
 - [x] shuffle and repeat controls
 - [x] tauri security (csp for assets, etc.)
@@ -24,9 +29,10 @@
 - [x] search
 - [x] better import fonts
 - [x] mini player
+- [ ] spacebar action (not possible without affecting focus behaviors)
 
 ## Fixes
 
-- [-] error handling
+- [ ] error handling
 - [x] handle playback errors
 - [x] `Add to Queue` won't work under Tracks

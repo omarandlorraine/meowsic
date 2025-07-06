@@ -67,7 +67,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <ToastProvider
         toastOffset={40}
         placement="top-center"
-        toastProps={{ radius: 'sm', classNames: { description: 'whitespace-pre-wrap pt-2' } }}
+        toastProps={{ radius: 'sm', classNames: { description: 'whitespace-pre-wrap pt-1' } }}
       />
     </QueryClientProvider>
   </React.StrictMode>,

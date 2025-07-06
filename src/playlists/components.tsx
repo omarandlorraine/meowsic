@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useDebounce } from 'use-debounce'
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, Input, useDisclosure } from '@heroui/react'
-import { CheckIcon, MoveRightIcon, PlayIcon, PlusIcon, SquarePenIcon, Trash2Icon } from 'lucide-react'
+import { CheckIcon, MoveLeftIcon, MoveRightIcon, PlayIcon, PlusIcon, SquarePenIcon, Trash2Icon } from 'lucide-react'
 import { reorder, isEditorOfType } from '@/utils'
 import { setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
 import { usePlayer } from '@/player'
@@ -107,6 +107,10 @@ export function PlaylistScreen() {
           </>
         ) : (
           <>
+            <Button as={Link} to="/playlists" isIconOnly radius="sm" variant="flat">
+              <MoveLeftIcon className="text-lg" />
+            </Button>
+
             <Button
               radius="sm"
               variant="flat"
@@ -271,9 +275,10 @@ export function PlaylistEditorModal({ isOpen, onOpenChange, existing, type, onAc
             <div className="text-default-500">Are you sure you want to remove this playlist?</div>
           ) : (
             <Input
-              variant="flat"
+              autoFocus
               radius="sm"
               label="Name"
+              variant="flat"
               value={name}
               onValueChange={setName}
               onClear={() => setName('')}

@@ -22,6 +22,7 @@ import {
   Volume1Icon,
   VolumeXIcon,
 } from 'lucide-react'
+import { useHotkeys } from 'react-hotkeys-hook'
 import { store, setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
 import { MiniPlayer } from '@/player/components'
 import { EmotionSelect } from '@/emotions/components'
@@ -38,6 +39,19 @@ export function Window() {
   const isHome = location.pathname === '/'
   const showBars = !isPlayerMaximized || !isHome
 
+  useHotkeys(
+    ['f', 'b'],
+    evt => {
+      switch (evt.key) {
+        case 'f':
+          return setPlayerMaximized(!isPlayerMaximized)
+        case 'b':
+          return setMiniPlayerVisibility(!isMiniPlayerVisible)
+      }
+    },
+    [isPlayerMaximized, isMiniPlayerVisible],
+  )
+
   return (
     <>
       <div
@@ -46,7 +60,15 @@ export function Window() {
           'flex items-center pointer-events-auto fixed inset-x-0 top-0 z-100 bg-default-50/25 backdrop-blur-lg backdrop-saturate-125',
           !showBars && 'opacity-0 hover:opacity-100 transition-opacity',
         )}>
-        <Button as={Link} to="/" radius="none" className="text-lg px-6" variant={isHome ? 'flat' : 'light'}>
+        <Button
+          as={Link}
+          to="/"
+          radius="none"
+          className="text-lg px-7"
+          variant={isHome ? 'flat' : 'light'}
+          onPress={() => {
+            if (isHome) setPlayerMaximized(!isPlayerMaximized)
+          }}>
           <PawPrintIcon className="text-lg text-secondary-600" /> Meowsic
         </Button>
 
@@ -135,12 +157,12 @@ export function Window() {
           <div className="flex flex-col gap-2 p-3 pt-[calc(theme(spacing.10)+theme(spacing.3))] h-full w-44">
             <NavLink url="/tracks" title="Tracks" icon={MusicIcon} />
             <NavLink url="/playlists" title="Playlists" icon={ListMusicIcon} />
-            <NavLink url="/emotions" title="Emotions" icon={SmileIcon} />
+            <NavLink url="/queue" title="Queue" icon={ListVideoIcon} />
 
             <hr className="border-default/30 mx-2" />
 
-            <NavLink url="/queue" title="Queue" icon={ListVideoIcon} />
             <NavLink url="/albums" title="Albums" icon={Disc3Icon} />
+            <NavLink url="/emotions" title="Emotions" icon={SmileIcon} />
             <NavLink url="/artists" title="Artists" icon={UserRoundIcon} />
 
             <NavLink url="/settings" title="Settings" icon={SettingsIcon} className="mt-auto" />

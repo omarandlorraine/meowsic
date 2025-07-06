@@ -1,5 +1,5 @@
 import { useLayoutEffect, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link } from 'react-router'
 import { useStore } from 'zustand'
 import { Button, cn, Image, Slider, Tooltip } from '@heroui/react'
 import {
@@ -17,7 +17,7 @@ import {
   XIcon,
 } from 'lucide-react'
 import { formatTime, getAssetUrl } from '@/utils'
-import { store, setMiniPlayerVisibility } from '@/settings'
+import { store, setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
 import { usePlayer } from '@/player'
 import { normalizeMeta } from '@/tracks'
 import { Cover } from '@/tracks/components'
@@ -162,8 +162,6 @@ export function Player({ mini }: PlayerProps) {
 }
 
 export function MiniPlayer() {
-  const navigate = useNavigate()
-
   return (
     <div
       className="fixed w-160 flex flex-col bottom-6 right-6 border border-default/30
@@ -172,7 +170,15 @@ export function MiniPlayer() {
         <PictureInPicture2Icon className="text-lg text-default-300 ml-2" />
 
         {/* // TODO: animate expansion */}
-        <Button isIconOnly size="sm" radius="sm" variant="light" className="ml-auto" onPress={() => navigate('/')}>
+        <Button
+          as={Link}
+          to="/"
+          isIconOnly
+          size="sm"
+          radius="sm"
+          variant="light"
+          className="ml-auto"
+          onPress={() => setPlayerMaximized(true)}>
           <SquareArrowOutUpLeftIcon className="text-lg text-default-500" />
         </Button>
 
