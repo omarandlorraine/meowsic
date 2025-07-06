@@ -1,5 +1,6 @@
 import { Checkbox, Chip, Input } from '@heroui/react'
 import { SearchIcon } from 'lucide-react'
+import { Player } from '@/player/components'
 import type { UseSelection } from '@/utils'
 
 type SearchBarProps = { value: string; onChange: (value: string) => void; className?: string }
@@ -46,6 +47,14 @@ export function SelectAllControls<T>({ selection, data }: SelectAllControlsProps
         classNames={{ base: '!text-foreground shrink-0 font-mono', closeButton: 'mx-0.5' }}>
         {selection.values.length}
       </Chip>
+    </div>
+  )
+}
+
+export function HomeScreen() {
+  return (
+    <div className="p-3 pt-[calc(theme(spacing.10)+theme(spacing.1))] w-full">
+      <Player />
     </div>
   )
 }

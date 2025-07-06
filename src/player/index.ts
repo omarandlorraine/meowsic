@@ -235,31 +235,12 @@ async function stop() {
   await invoke('player_stop')
 }
 
-async function setVolume(volume: number) {
+export async function setVolume(volume: number) {
   await invoke('player_set_volume', { volume })
 }
 
 export async function getArbitraryTracks() {
   return await invoke<Track[]>('player_get_arbitrary_tracks')
-}
-
-export const onGlobalShortcut: ShortcutHandler = evt => {
-  if (evt.state === 'Released') return
-  const state = store.getState()
-
-  switch (evt.shortcut) {
-    case 'MediaPlayPause':
-      return state.isPaused ? play() : pause()
-
-    case 'MediaTrackNext':
-      return next()
-
-    case 'MediaTrackPrevious':
-      return prev()
-
-    case 'MediaStop':
-      return reset()
-  }
 }
 
 export function usePlayer() {
@@ -292,5 +273,24 @@ export function usePlayer() {
     prev,
     stop,
     play,
+  }
+}
+
+export const onGlobalShortcut: ShortcutHandler = evt => {
+  if (evt.state === 'Released') return
+  const state = store.getState()
+
+  switch (evt.shortcut) {
+    case 'MediaPlayPause':
+      return state.isPaused ? play() : pause()
+
+    case 'MediaTrackNext':
+      return next()
+
+    case 'MediaTrackPrevious':
+      return prev()
+
+    case 'MediaStop':
+      return reset()
   }
 }

@@ -15,9 +15,9 @@ import {
   DropdownTrigger,
 } from '@heroui/react'
 import { CheckIcon, PlayIcon, SmileIcon } from 'lucide-react'
-import { setMiniPlayerVisibility } from '@/utils'
+import { DEFAULT_EMOTION, store, setEmotion, setMiniPlayerVisibility } from '@/settings'
 import { usePlayer } from '@/player'
-import { DEFAULT_EMOTION, getEmotions, getEmotionTracks, setEmotion, store } from '@/emotions'
+import { getEmotions, getEmotionTracks } from '@/emotions'
 import { createSearchIndex } from '@/tracks'
 import { SearchBar } from '@/components'
 import { ControlsContainer, ListItem, List } from '@/tracks/components'
@@ -101,12 +101,9 @@ export function EmotionScreen() {
             key={item.hash}
             index={index}
             data={item}
+            onPlay={onPlay}
             isPlaying={player.current === item}
             draggableProps={draggableProps}
-            onPlay={async () => {
-              await player.goto(index)
-              await player.play()
-            }}
           />
         )}
       </List>
@@ -150,7 +147,7 @@ export function EmotionSelect({ className }: EmotionSelectProps) {
   const query = useQuery({ queryKey: ['emotions'], queryFn: getEmotions })
   const items = query.data ?? []
 
-  const current = useStore(store, state => query.data?.find(it => it.name === state.current))
+  const current = useStore(store, state => query.data?.find(it => it.name === state.currentEmotion))
 
   return (
     <Dropdown backdrop="opaque" radius="sm">

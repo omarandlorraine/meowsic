@@ -12,6 +12,7 @@
 - [ ] toolips and guides
 - [ ] playlist export
 - [ ] smoother seekbar
+- [x] volume controls
 - [x] shuffle and repeat controls
 - [x] tauri security (csp for assets, etc.)
 - [x] remove web elements like selection and context menu

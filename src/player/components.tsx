@@ -14,7 +14,8 @@ import {
   UserRoundIcon,
   XIcon,
 } from 'lucide-react'
-import { formatTime, getAssetUrl, setMiniPlayerVisibility, store } from '@/utils'
+import { formatTime, getAssetUrl } from '@/utils'
+import { store, setMiniPlayerVisibility } from '@/settings'
 import { usePlayer } from '@/player'
 import { normalizeMeta } from '@/tracks'
 import { Cover } from '@/tracks/components'

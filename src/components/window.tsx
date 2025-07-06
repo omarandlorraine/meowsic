@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, cn } from '@heroui/react'
+import { Button, cn, Popover, PopoverContent, PopoverTrigger, Slider } from '@heroui/react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { Link, Outlet, useLocation } from 'react-router'
 import { useStore } from 'zustand'
@@ -18,8 +18,11 @@ import {
   PictureInPicture2Icon,
   ChevronsDownUpIcon,
   ChevronsUpDownIcon,
+  Volume2Icon,
+  Volume1Icon,
+  VolumeXIcon,
 } from 'lucide-react'
-import { setMiniPlayerVisibility, setPlayerMaximized, store } from '@/utils'
+import { store, setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
 import { MiniPlayer } from '@/player/components'
 import { EmotionSelect } from '@/emotions/components'
 import type { LucideIcon } from 'lucide-react'
@@ -27,8 +30,10 @@ import type { LucideIcon } from 'lucide-react'
 export function Window() {
   const location = useLocation()
   const currentWindow = getCurrentWindow()
-  const { isPlayerMaximized, isMiniPlayerVisible } = useStore(store)
+  const { isPlayerMaximized, isMiniPlayerVisible, volume: globalVolume } = useStore(store)
+
   const [isMaximized, setIsMaximized] = useState(false)
+  const [volume, setVolume] = useState(globalVolume * 100)
 
   const isHome = location.pathname === '/'
   const showBars = !isPlayerMaximized || !isHome
@@ -64,6 +69,40 @@ export function Window() {
           onPress={() => setPlayerMaximized(!isPlayerMaximized)}>
           <MaximizeIcon className={cn('text-lg', !isPlayerMaximized && 'text-default-500')} />
         </Button>
+
+        <Popover placement="left" containerPadding={8} radius="sm">
+          <PopoverTrigger>
+            <Button isIconOnly radius="none" variant="light">
+              <Volume2Icon className="text-lg text-default-500" />
+            </Button>
+          </PopoverTrigger>
+
+          <PopoverContent>
+            <div className="w-100 flex items-center gap-2 py-2">
+              <Button
+                isIconOnly
+                radius="sm"
+                variant="flat"
+                color={globalVolume > 0 ? 'default' : 'warning'}
+                onPress={() => store.setState(state => ({ volume: state.volume > 0 ? 0 : volume / 100 }))}>
+                {globalVolume > 0 ? <Volume1Icon className="text-lg" /> : <VolumeXIcon className="text-lg" />}
+              </Button>
+
+              <Slider
+                size="sm"
+                minValue={0}
+                maxValue={100}
+                label="Volume"
+                color="foreground"
+                value={volume}
+                onChangeEnd={() => store.setState({ volume: volume / 100 })}
+                onChange={value => setVolume(typeof value === 'number' ? value : value[0])}
+              />
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        <div className="h-6 border-r border-default/30" />
 
         <Button variant="light" radius="none" className="min-w-12" onPress={() => currentWindow.minimize()}>
           <MinusIcon className="text-lg text-default-500" />

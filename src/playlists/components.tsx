@@ -4,7 +4,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useDebounce } from 'use-debounce'
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, Input, useDisclosure } from '@heroui/react'
 import { CheckIcon, MoveRightIcon, PlayIcon, PlusIcon, SquarePenIcon, Trash2Icon } from 'lucide-react'
-import { reorder, setMiniPlayerVisibility, isEditorOfType } from '@/utils'
+import { reorder, isEditorOfType } from '@/utils'
+import { setMiniPlayerVisibility } from '@/settings'
 import { usePlayer } from '@/player'
 import {
   addPlaylist,
