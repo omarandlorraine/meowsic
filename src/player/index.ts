@@ -2,13 +2,14 @@ import { createStore, useStore } from 'zustand'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { addToast } from '@heroui/react'
-import { BackendPlayer } from '@/player/types'
+import { BackendPlayer, WebPlayer } from '@/player/types'
 import {
   getNextIndex,
   getPrevIndex,
   invalidateInterval,
   isEmotionRankingAllowed,
   isRepeatCurrent,
+  selectPlayer,
 } from '@/player/utils'
 import { rankUp } from '@/emotions'
 import { setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
@@ -17,6 +18,7 @@ import type { Track } from '@/tracks'
 import type { Player } from '@/player/types'
 
 const backendPlayer = new BackendPlayer()
+const webPlayer = new WebPlayer()
 
 function initialState(): Store {
   return {
@@ -36,44 +38,43 @@ function initialState(): Store {
 export const store = createStore<Store>(initialState)
 
 // NOTE: if not paused, invalidate the interval and create a new one
-// TODO: fix issue with context switching b/w players
+// TODO: test any issues with context switching b/w players
 
-export async function goto(index: number) {
+// this contains the core logic for all the navigations and context switching
+export async function goto(index: number, using?: Player) {
   const state = store.getState()
   if (!state.isPaused) invalidateInterval(state.interval)
 
   const track = state.queue[index]
-  const player = backendPlayer // selectPlayer(track, [backendPlayer, webPlayer])
+  const player = using ?? selectPlayer(track, [backendPlayer, webPlayer])
+
+  // case: stop the previous player
+  if (player !== state.player) state.player.stop()
 
   try {
     await player.goto(index)
     const interval = !state.isPaused ? createInterval() : null
 
-    // TODO: fix issue with context switching b/w players
     // case: replace with metadata from the web player
-    // let queue = state.queue
+    let queue = state.queue
 
-    // if (player instanceof WebPlayer) {
-    //   const newQueue = Array.from(queue)
-    //   const duration = await player.getDuration()
+    if (player instanceof WebPlayer) {
+      const newQueue = Array.from(queue)
+      const duration = await player.getDuration()
 
-    //   newQueue[index].duration = duration
-    //   queue = newQueue
-    // }
+      newQueue[index].duration = duration
+      queue = newQueue
+    }
 
-    // TODO: fix issue with context switching b/w players
-    // if (player !== state.player) {
-    //   await state.player.stop()
-    //   await player.play()
-    // }
+    // case: continue the playback if the player is not paused while navigating
+    if (!state.isPaused) await player.play()
 
     store.setState({ current: index, elapsed: 0, interval, error: null, player })
   } catch (err) {
     console.error(err, track)
 
-    // TODO: fix issue with context switching b/w players
     // case: fallback to web player once if backend fails
-    // if (!using) return await goto(index, webPlayer)
+    if (!using) return await goto(index, webPlayer)
 
     const error = err as Error // since backend response have similar type
     store.setState({ current: index, elapsed: 0, error })
@@ -167,7 +168,7 @@ function createInterval() {
     const state = store.getState()
     const current = state.queue.at(state.current)
 
-    if (!current) return reset() // TODO: observe for issues ? only stop() was needed here
+    if (!current) return reset()
     if (state.elapsed >= current.duration) return next()
 
     store.setState(state => ({ elapsed: state.elapsed + 1 }))
@@ -219,24 +220,24 @@ export async function extendQueue(tracks: Track[]) {
   store.setState({ queue })
 }
 
+async function stop() {
+  await backendPlayer.stop()
+  await webPlayer.stop()
+}
+
 async function setQueue(queue: Track[]) {
   await backendPlayer.setQueue(queue)
-  // webPlayer.setQueue(queue)
+  await webPlayer.setQueue(queue)
 }
 
 async function setCurrent(index: number) {
   await backendPlayer.setCurrent(index)
-  // webPlayer.setCurrent(index)
+  await webPlayer.setCurrent(index)
 }
 
 export async function setVolume(volume: number) {
   await backendPlayer.setVolume(volume)
-  // webPlayer.setVolume(volume)
-}
-
-async function stop() {
-  await backendPlayer.stop()
-  // webPlayer.stop()
+  await webPlayer.setVolume(volume)
 }
 
 export function usePlayer() {

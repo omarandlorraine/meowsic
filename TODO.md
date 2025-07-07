@@ -3,11 +3,9 @@
 ## Features
 
 - [ ] track details screen
-- [ ] unsupported audio fallback
 - [ ] lyrics manager
 - [ ] assets manager
 - [ ] animations
-- [ ] smoother seekbar
 - [ ] persist list position
 - [ ] external media playback
 - [ ] better screen size support
@@ -18,6 +16,8 @@
 - [ ] guides
 - [ ] toolips and toasts
 - [ ] layout customization
+- [x] smoother seekbar
+- [x] unsupported audio fallback to web audio
 - [x] volume controls
 - [x] shuffle and repeat controls
 - [x] tauri security (csp for assets, etc.)

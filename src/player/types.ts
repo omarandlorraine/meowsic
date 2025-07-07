@@ -2,9 +2,6 @@ import { invoke } from '@tauri-apps/api/core'
 import { getAssetUrl } from '@/utils'
 import type { Track } from '@/tracks'
 
-// NOTE: haven't tested all the associated formats
-// TODO: fix issue with context switching b/w players
-
 export class BackendPlayer implements Player {
   associated = ['mp3', 'm4a', 'flac', 'wav', 'ogg', 'aac', 'opus', 'aiff']
 
@@ -26,6 +23,7 @@ export class BackendPlayer implements Player {
 
   async stop() {
     await invoke('player_stop')
+    await this.pause()
   }
 
   async setQueue(queue: Track[]) {
@@ -43,7 +41,6 @@ export class BackendPlayer implements Player {
 
 export class WebPlayer implements Player {
   associated = []
-
   player = new Audio()
   queue: string[] = []
   current = 0
@@ -63,11 +60,11 @@ export class WebPlayer implements Player {
     this.load(this.queue[index])
   }
 
-  seek(elapsed: number) {
+  async seek(elapsed: number) {
     this.player.currentTime = elapsed
   }
 
-  pause() {
+  async pause() {
     this.player.pause()
   }
 
@@ -75,19 +72,20 @@ export class WebPlayer implements Player {
     await this.player.play()
   }
 
-  stop() {
+  async stop() {
     this.load(null)
+    await this.pause()
   }
 
-  setQueue(queue: Track[]) {
+  async setQueue(queue: Track[]) {
     this.queue = queue.map(t => t.path)
   }
 
-  setCurrent(current: number) {
+  async setCurrent(current: number) {
     this.current = current
   }
 
-  setVolume(volume: number) {
+  async setVolume(volume: number) {
     this.player.volume = volume
   }
 
@@ -104,12 +102,12 @@ export class WebPlayer implements Player {
 export type Player = {
   associated: string[]
 
-  goto(index: number): Promise<void> | void
-  seek(elapsed: number): Promise<void> | void
-  pause(): Promise<void> | void
-  play(): Promise<void> | void
-  stop(): Promise<void> | void
-  setVolume(volume: number): Promise<void> | void
-  setQueue(queue: Track[]): Promise<void> | void
-  setCurrent(current: number): Promise<void> | void
+  goto(index: number): Promise<void>
+  seek(elapsed: number): Promise<void>
+  pause(): Promise<void>
+  play(): Promise<void>
+  stop(): Promise<void>
+  setVolume(volume: number): Promise<void>
+  setQueue(queue: Track[]): Promise<void>
+  setCurrent(current: number): Promise<void>
 }

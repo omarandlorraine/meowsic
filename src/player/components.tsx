@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { useStore } from 'zustand'
 import { Button, cn, Image, Slider, Tooltip } from '@heroui/react'
@@ -28,9 +28,18 @@ export function Player({ mini }: PlayerProps) {
   const player = usePlayer()
   const meta = normalizeMeta(player.current)
   const isPlayerMaximized = useStore(store, state => state.isPlayerMaximized)
-  const [progress, setProgress] = useState<number | number[]>(player.elapsed)
 
-  useLayoutEffect(() => setProgress(player.elapsed), [player.elapsed])
+  const [progress, setProgress] = useState(player.elapsed)
+  const [isSeeking, setIsSeeking] = useState(false)
+  const prevElapsed = useRef(player.elapsed)
+
+  useLayoutEffect(() => {
+    if (!isSeeking && player.elapsed !== prevElapsed.current) {
+      setProgress(player.elapsed)
+    }
+
+    prevElapsed.current = player.elapsed
+  }, [player.elapsed, isSeeking])
 
   return (
     <div className={cn('flex flex-col items-center justify-center h-full isolate', mini && 'pb-6 pt-3')}>
@@ -89,13 +98,17 @@ export function Player({ mini }: PlayerProps) {
           aria-label="Progress"
           value={progress}
           maxValue={player.current?.duration ?? -1}
-          onChange={setProgress}
+          onChange={value => {
+            setIsSeeking(true)
+            setProgress(typeof value === 'number' ? value : value[0])
+          }}
           isDisabled={!player.current || !!player.error}
           onChangeEnd={value => {
-            if (typeof value === 'number') {
-              player.seek(value)
-              setProgress(value)
-            }
+            setIsSeeking(false)
+            const pos = typeof value === 'number' ? value : value[0]
+
+            player.seek(pos)
+            setProgress(pos)
           }}
         />
 
