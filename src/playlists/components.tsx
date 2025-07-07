@@ -53,8 +53,6 @@ export function PlaylistScreen() {
       .map(it => map.get(it.id))
       .filter(Boolean) as Track[]
 
-    console.log(map)
-
     setFiltered(data)
   }, [queryPlaylistTracks.data, debouncedSearchQuery])
 

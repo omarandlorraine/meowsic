@@ -18,8 +18,7 @@ export async function rankUp(track: Track) {
     if (emotion === DEFAULT_EMOTION) return
 
     await invoke('db_rank_up_emotion_track', { name: emotion, hash: track.hash })
-    console.log(`Ranked up ${track.name} in ${emotion}`)
   } catch (err) {
-    console.error(err)
+    console.error(err, track)
   }
 }
