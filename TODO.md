@@ -2,7 +2,6 @@
 
 ## Features
 
-- [ ] track details screen
 - [ ] lyrics manager
 - [ ] assets manager
 - [ ] animations
@@ -16,6 +15,7 @@
 - [ ] guides
 - [ ] toolips and toasts
 - [ ] layout customization
+- [x] track details screen
 - [x] smoother seekbar
 - [x] unsupported audio fallback to web audio
 - [x] volume controls

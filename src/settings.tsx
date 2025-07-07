@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { addToast, Button, Select, SelectItem, Slider } from '@heroui/react'
+import { addToast, Button, Image, Select, SelectItem, Slider } from '@heroui/react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { invoke } from '@tauri-apps/api/core'
+import { getName, getVersion } from '@tauri-apps/api/app'
+import { openUrl } from '@tauri-apps/plugin-opener'
 import { open } from '@tauri-apps/plugin-dialog'
 import { createStore, useStore } from 'zustand'
 import { persist } from 'zustand/middleware'
@@ -14,6 +16,11 @@ export const DEFAULT_EMOTION = 'Neutral'
 
 export function SettingsScreen() {
   const queryDirs = useQuery({ queryKey: ['dirs'], queryFn: getDirs })
+
+  const queryApp = useQuery({
+    queryKey: ['app'],
+    queryFn: async () => ({ name: await getName(), version: await getVersion() }),
+  })
 
   const mutationScan = useMutation({
     mutationFn: scanDirs,
@@ -106,6 +113,40 @@ export function SettingsScreen() {
           <SelectItem key={font}>{font}</SelectItem>
         ))}
       </Select>
+
+      <hr className="w-full mt-3 border-default/30" />
+      <div className="text-large my-2">About</div>
+
+      {queryApp.isSuccess && (
+        <div className="flex flex-col text-default-500 text-small">
+          <Image removeWrapper src="/icons/logo.png" width={88} height={88} className="mb-6" />
+
+          <div className="text-medium text-foreground mb-0.5">
+            <span className="capitalize">{queryApp.data.name}</span> v{queryApp.data.version}
+          </div>
+
+          <div>© {new Date().getFullYear()} Cyan Froste</div>
+
+          <div className="text-tiny my-3">
+            Licensed under Apache <br /> License 2.0 SPDX-License-Identifier: Apache-2.0
+          </div>
+
+          <button
+            onClick={() => openUrl('https://github.com/CyanFroste/meowsic/blob/master/LICENSE')}
+            className="self-start text-secondary-700 mb-6 hover:cursor-pointer">
+            View full license
+          </button>
+
+          <Button
+            radius="sm"
+            variant="flat"
+            className="self-start"
+            onPress={() => openUrl('https://github.com/CyanFroste/meowsic')}>
+            <img height="24" width="24" src="https://cdn.simpleicons.org/github/white" className="size-6" />
+            View source code
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
