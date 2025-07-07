@@ -4,11 +4,13 @@ import { reorder } from '@/utils'
 import { usePlayer } from '@/player'
 import { SelectAllControls } from '@/components'
 import { ControlsContainer, List, ListItem, useTrackSelection } from '@/tracks/components'
+import { useTrackDetails } from '@/tracks/components/details'
 import type { DropResult } from '@hello-pangea/dnd'
 
 export function QueueScreen() {
   const player = usePlayer()
   const selection = useTrackSelection()
+  const trackDetails = useTrackDetails()
 
   const onRemove = async () => {
     if (!player.current) return
@@ -87,6 +89,7 @@ export function QueueScreen() {
             isPlaying={player.current === item}
             onToggleSelect={selection.toggle}
             draggableProps={draggableProps}
+            onShowDetails={trackDetails.show}
             onPlay={async () => {
               await player.goto(index)
               await player.play()

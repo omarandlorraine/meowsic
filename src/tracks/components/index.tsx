@@ -36,6 +36,7 @@ import { createSearchIndex, getTracks, normalizeMeta } from '@/tracks'
 import { addPlaylist, addPlaylistTracks, getPlaylists } from '@/playlists'
 import { SearchBar, SelectAllControls } from '@/components'
 import { PlaylistEditorModal } from '@/playlists/components'
+import { useTrackDetails } from '@/tracks/components/details'
 import type { ItemProps as VirtuosoItemProps, ContextProp as VirtuosoContextProps } from 'react-virtuoso'
 import type { DraggableProvided, DraggableStateSnapshot, DropResult, DraggableRubric } from '@hello-pangea/dnd'
 import type { LucideIcon } from 'lucide-react'
@@ -48,6 +49,7 @@ export function TracksScreen() {
   const [searchParams] = useSearchParams()
   const { album, artist } = parseFilters(searchParams)
   const player = usePlayer()
+  const trackDetails = useTrackDetails()
 
   const query = useQuery({
     queryKey: ['tracks', album, artist],
@@ -210,6 +212,7 @@ export function TracksScreen() {
             isPlaying={player.current === item}
             onToggleSelect={selection.toggle}
             draggableProps={draggableProps}
+            onShowDetails={trackDetails.show}
           />
         )}
       </List>

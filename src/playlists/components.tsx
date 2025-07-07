@@ -19,6 +19,7 @@ import {
 import { createSearchIndex, type Track } from '@/tracks'
 import { SearchBar, SelectAllControls } from '@/components'
 import { useTrackSelection, ControlsContainer, ListItem, List } from '@/tracks/components'
+import { useTrackDetails } from '@/tracks/components/details'
 import type { DropResult } from '@hello-pangea/dnd'
 import type { EditorType } from '@/utils'
 
@@ -31,6 +32,7 @@ export function PlaylistScreen() {
   const player = usePlayer()
   const selection = useTrackSelection()
   const editorModal = useDisclosure()
+  const trackDetails = useTrackDetails()
   const [editorType, setEditorType] = useState<EditorType | null>(null)
 
   const queryPlaylistTracks = useQuery({
@@ -120,7 +122,7 @@ export function PlaylistScreen() {
               <PlayIcon className="text-lg" /> Play All
             </Button>
 
-            <div className="text-large px-6 border-x border-default/30">{params.name}</div>
+            <div className="text-large px-6 border-x border-default/30 min-w-40">{params.name}</div>
 
             <Button
               radius="sm"
@@ -162,6 +164,7 @@ export function PlaylistScreen() {
             isPlaying={player.current === item}
             onToggleSelect={selection.toggle}
             draggableProps={draggableProps}
+            onShowDetails={trackDetails.show}
           />
         )}
       </List>
@@ -226,8 +229,9 @@ export function PlaylistsScreen() {
                   radius="sm"
                   variant="light"
                   color="secondary"
-                  className="!text-foreground">
-                  {name} <MoveRightIcon className="text-lg ml-2" />
+                  className="!text-foreground min-w-60 justify-start">
+                  <MoveRightIcon className="text-lg" />
+                  <div className="mx-2">{name}</div>
                 </Button>
               </div>
             ))}

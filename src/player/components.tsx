@@ -54,7 +54,7 @@ export function Player({ mini }: PlayerProps) {
           <Cover url={player.current?.cover} className="size-40 shrink-0" />
 
           <div className="flex flex-col gap-2">
-            {meta.title && <div className="text-large mr-auto">{meta.title}</div>}
+            {meta.title && <div className="text-large">{meta.title}</div>}
 
             {meta.album && (
               <div className="text-default-500 flex items-center gap-2 text-small">

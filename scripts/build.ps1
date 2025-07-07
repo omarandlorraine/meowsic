@@ -4,11 +4,11 @@ $originalLocation = Get-Location
 # Set up paths
 $rootPath = (Resolve-Path "$PSScriptRoot/..").Path
 $backendPath = Join-Path $rootPath "backend"
-$releasePath = Join-Path $rootPath "release"
 $binPath = Join-Path $rootPath "bin"
 
 # Run build
 Set-Location $rootPath
+
 pnpm build
 
 # Read name and version from Cargo.toml
@@ -32,30 +32,25 @@ else {
     exit 1
 }
 
-$exeName = "$appName.exe"
-
 # Paths
-$compiledBinary = Join-Path "$backendPath/target/release" $exeName
-$releaseBinary = Join-Path $releasePath "$appName-$version.exe"
-$latestBinary = Join-Path $binPath $exeName
+$installer = Join-Path $backendPath "target/release/bundle/nsis/${appName}_${version}_x64-setup.exe"
+$compiledBinary = Join-Path $backendPath "target/release/$appName.exe"
+$portableBinary = Join-Path $binPath "${appName}_$version.exe"
 
 # Ensure output directories
-New-Item -ItemType Directory -Force -Path $releasePath, $binPath | Out-Null
+New-Item -ItemType Directory -Force -Path $binPath | Out-Null
 
-# Copy executables
-Copy-Item -Force -Path $compiledBinary -Destination $releaseBinary
-Copy-Item -Force -Path $compiledBinary -Destination $latestBinary
+# Copy compiled binary
+Copy-Item -Force -Path $compiledBinary -Destination $portableBinary 
 
-# Copy NSIS installer
-$nsisSource = Join-Path $backendPath "/target/release/bundle/nsis/${appName}_${version}_x64-setup.exe"
-if (Test-Path $nsisSource) {
-    Copy-Item -Force -Path $nsisSource -Destination $releasePath
+# Copy installer if it exists
+if (Test-Path $installer) {
+    Copy-Item -Force -Path $installer -Destination $binPath
 }
 else {
-    Write-Warning "NSIS installer not found: $nsisSource"
+    Write-Warning "Installer not found: $installer"
 }
 
-# Restore original directory
 Set-Location $originalLocation
-
-Write-Host "Build complete: $releaseBinary, $latestBinary, and NSIS installer copied to release folder."
+Write-Host "Build complete: Portable binary and NSIS installer copied to $binPath"
+Get-ChildItem $binPath

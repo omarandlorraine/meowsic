@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { store, setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
+import { TrackDetailsModal } from '@/tracks/components/details'
 import { MiniPlayer } from '@/player/components'
 import { EmotionSelect } from '@/emotions/components'
 import type { LucideIcon } from 'lucide-react'
@@ -173,6 +174,8 @@ export function Window() {
       </div>
 
       {isMiniPlayerVisible && !isHome && <MiniPlayer />}
+
+      <TrackDetailsModal />
     </>
   )
 }

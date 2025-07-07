@@ -16,6 +16,7 @@ export type Track = {
   date?: string | null
   genre?: string | null
   position?: number | null
+  rank?: number | null
 }
 
 type GetTracksFilters = {

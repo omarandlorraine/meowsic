@@ -14,13 +14,14 @@ import {
   DropdownMenu,
   DropdownTrigger,
 } from '@heroui/react'
-import { CheckIcon, PlayIcon, SmileIcon } from 'lucide-react'
+import { CheckIcon, MoveLeftIcon, PlayIcon, SmileIcon } from 'lucide-react'
 import { DEFAULT_EMOTION, store, setEmotion, setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
 import { usePlayer } from '@/player'
 import { getEmotions, getEmotionTracks } from '@/emotions'
 import { createSearchIndex } from '@/tracks'
 import { SearchBar } from '@/components'
 import { ControlsContainer, ListItem, List } from '@/tracks/components'
+import { useTrackDetails } from '@/tracks/components/details'
 import type { Track } from '@/tracks'
 
 const searchIndex = createSearchIndex()
@@ -28,6 +29,7 @@ const searchIndex = createSearchIndex()
 export function EmotionScreen() {
   const params = useParams<{ name: string }>()
   const player = usePlayer()
+  const trackDetails = useTrackDetails()
 
   const query = useQuery({ queryKey: ['emotions'], queryFn: getEmotions })
   const emotion = query.data?.find(it => it.name === params.name)
@@ -71,6 +73,10 @@ export function EmotionScreen() {
   return (
     <div className="flex flex-col size-full relative">
       <ControlsContainer>
+        <Button as={Link} to="/emotions" isIconOnly radius="sm" variant="flat">
+          <MoveLeftIcon className="text-lg" />
+        </Button>
+
         <Button
           radius="sm"
           variant="flat"
@@ -104,6 +110,7 @@ export function EmotionScreen() {
             onPlay={onPlay}
             isPlaying={player.current === item}
             draggableProps={draggableProps}
+            onShowDetails={trackDetails.show}
           />
         )}
       </List>
