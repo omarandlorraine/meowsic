@@ -369,8 +369,12 @@ type CoverProps = {
 }
 
 export function Cover({ url, className, placeholder: Placeholder = MusicIcon, external, onClick }: CoverProps) {
+  const Component = onClick ? 'button' : 'div'
+
   return (
-    <div className={cn('rounded-small overflow-hidden', className)}>
+    <Component
+      {...(onClick && { type: 'button', onClick, disabled: !onClick })}
+      className={cn('rounded-small overflow-hidden', className)}>
       {url ? (
         <Image
           isBlurred
@@ -379,16 +383,15 @@ export function Cover({ url, className, placeholder: Placeholder = MusicIcon, ex
           width="100%"
           height="100%"
           loading="lazy"
-          onClick={onClick}
           src={external ? url : getAssetUrl(url)}
           classNames={{ wrapper: 'size-full', img: 'size-full object-contain' }}
         />
       ) : (
         <div className="size-full grid place-items-center bg-radial from-secondary-50/75 to-default-50/25">
-          <Placeholder className="size-1/3 text-secondary-900 opacity-50" />
+          <Placeholder className="size-1/3 text-secondary-800 opacity-80" />
         </div>
       )}
-    </div>
+    </Component>
   )
 }
 

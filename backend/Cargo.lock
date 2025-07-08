@@ -2502,7 +2502,7 @@ dependencies = [
 
 [[package]]
 name = "meowsic"
-version = "1.4.2"
+version = "1.4.3"
 dependencies = [
  "anyhow",
  "parking_lot",
