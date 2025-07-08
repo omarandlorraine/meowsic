@@ -10,7 +10,6 @@ import {
   DropdownMenu,
   DropdownSection,
   DropdownTrigger,
-  Image,
   cn,
   useDisclosure,
 } from '@heroui/react'
@@ -21,26 +20,29 @@ import {
   ListMusicIcon,
   ListVideoIcon,
   MoveLeftIcon,
-  MusicIcon,
   PlayIcon,
   PlusIcon,
   UserRoundIcon,
 } from 'lucide-react'
-import { Virtuoso } from 'react-virtuoso'
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { useDebounce } from 'use-debounce'
-import { getAssetUrl, useSelection } from '@/utils'
-import { setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
+import { useSelection } from '@/utils'
 import { extendQueue, usePlayer } from '@/player'
-import { createSearchIndex, getTracks, normalizeMeta } from '@/tracks'
+import { setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
 import { addPlaylist, addPlaylistTracks, getPlaylists } from '@/playlists'
-import { SearchBar, SelectAllControls } from '@/components'
+import { SearchBar, SelectAllControls, AppBar } from '@/components'
+import { SortableVirtualList } from '@/components/lists'
 import { PlaylistEditorModal } from '@/playlists/components'
-import { AlbumLink, ArtistLink, PropertyText, useTrackDetails } from '@/tracks/components/details'
-import type { ItemProps as VirtuosoItemProps, ContextProp as VirtuosoContextProps } from 'react-virtuoso'
-import type { DraggableProvided, DraggableStateSnapshot, DropResult, DraggableRubric } from '@hello-pangea/dnd'
-import type { LucideIcon } from 'lucide-react'
+import { createSearchIndex, getTracks, normalizeMeta } from '@/tracks'
+import { AlbumLink, ArtistLink, Cover, PropertyText, useTrackDetails } from '@/tracks/components/details'
 import type { Track } from '@/tracks'
+import type {
+  DraggableProps,
+  OnDragEnd,
+  RenderDraggableClone,
+  SortableListChildren,
+  VirtualHeaderProps,
+  VirtualListProps,
+} from '@/components/lists'
 
 const searchIndex = createSearchIndex()
 
@@ -94,7 +96,7 @@ export function TracksScreen() {
 
   return (
     <div className="flex flex-col size-full relative">
-      <ControlsContainer>
+      <AppBar>
         {selection.values.length > 0 ? (
           <>
             {query.isSuccess && (
@@ -199,7 +201,7 @@ export function TracksScreen() {
             <SearchBar value={searchQuery} onChange={setSearchQuery} className="w-120" />
           </>
         )}
-      </ControlsContainer>
+      </AppBar>
 
       <List data={filtered}>
         {(item, index, draggableProps) => (
@@ -236,47 +238,28 @@ export function TracksScreen() {
 
 type ListProps = {
   data: Track[]
-  onDragEnd?: (result: DropResult) => void
-  children: (item: Track, index: number, draggableProps?: DraggableProps) => React.ReactNode
   isDragDisabled?: boolean
+  onDragEnd?: OnDragEnd
+  children: SortableListChildren<Track>
 }
 
 export function List({ data, children, onDragEnd, isDragDisabled }: ListProps) {
-  const renderClone = (provided: DraggableProvided, snapshot: DraggableStateSnapshot, rubric: DraggableRubric) => (
+  const renderClone: RenderDraggableClone = (provided, snapshot, rubric) => (
     <ListItem data={data[rubric.source.index]} draggableProps={{ provided, snapshot }} />
   )
 
   return (
-    <DragDropContext onDragEnd={onDragEnd ?? (() => {})}>
-      <Droppable mode="virtual" droppableId="droppable" renderClone={renderClone}>
-        {provided => {
-          const ref = (el: Window | HTMLElement | null) => provided.innerRef(el as HTMLElement)
-
-          return (
-            <Virtuoso
-              scrollerRef={ref}
-              data={data}
-              overscan={5}
-              className="size-full shrink-0"
-              components={{ Item: VirtualItem, List: VirtualList, Header: VirtualHeader }}
-              itemContent={(index, item) => {
-                if (isDragDisabled || !onDragEnd) return children(item, index)
-
-                return (
-                  <Draggable key={item.hash} index={index} draggableId={item.hash}>
-                    {(provided, snapshot) => children(item, index, { provided, snapshot })}
-                  </Draggable>
-                )
-              }}
-            />
-          )
-        }}
-      </Droppable>
-    </DragDropContext>
+    <SortableVirtualList
+      data={data}
+      onDragEnd={onDragEnd}
+      isDragDisabled={isDragDisabled}
+      getItemKey={getKey}
+      children={children}
+      renderClone={renderClone}
+      components={{ List: VirtualList, Header: ListHeader }}
+    />
   )
 }
-
-type DraggableProps = { provided: DraggableProvided; snapshot: DraggableStateSnapshot }
 
 type ListItemProps = {
   data: Track
@@ -360,77 +343,11 @@ export const ListItem = memo(
     prev.draggableProps === next.draggableProps,
 )
 
-type CoverProps = {
-  url?: string | null
-  className?: string
-  placeholder?: LucideIcon | (() => React.ReactNode)
-  external?: boolean
-  onClick?: () => void
-}
-
-export function Cover({ url, className, placeholder: Placeholder = MusicIcon, external, onClick }: CoverProps) {
-  const Component = onClick ? 'button' : 'div'
-
-  return (
-    <Component
-      {...(onClick && { type: 'button', onClick, disabled: !onClick })}
-      className={cn('rounded-small overflow-hidden', className)}>
-      {url ? (
-        <Image
-          isBlurred
-          radius="none"
-          shadow="none"
-          width="100%"
-          height="100%"
-          loading="lazy"
-          src={external ? url : getAssetUrl(url)}
-          classNames={{ wrapper: 'size-full', img: 'size-full object-contain' }}
-        />
-      ) : (
-        <div className="size-full grid place-items-center bg-radial from-secondary-50/75 to-default-50/25">
-          <Placeholder className="size-1/3 text-secondary-800 opacity-80" />
-        </div>
-      )}
-    </Component>
-  )
-}
-
-export function ControlsContainer({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      {...props}
-      className={cn(
-        'px-6 h-16 flex items-center gap-3 rounded-small absolute top-[calc(theme(spacing.10)+theme(spacing.2))] left-0 right-3',
-        'bg-default-50/25 backdrop-blur-lg z-50 backdrop-saturate-125',
-        className,
-      )}
-    />
-  )
-}
-
-function VirtualItem({ item, ...props }: VirtuosoItemProps<Track>) {
-  // needed to preserve height
-  const [size, setSize] = useState(0)
-  const knownSize = props['data-known-size']
-
-  useEffect(() => {
-    if (knownSize) setSize(knownSize)
-  }, [knownSize])
-
-  return (
-    <div
-      {...props}
-      style={{ ...props.style, '--item-height': `${size}px` } as React.CSSProperties}
-      className="empty:min-h-[var(--item-height)] empty:box-border"
-    />
-  )
-}
-
-function VirtualList(props: React.HTMLAttributes<HTMLDivElement>) {
+function VirtualList(props: VirtualListProps) {
   return <div {...props} className="flex flex-col gap-1 px-3 shrink-0 w-full divide-y divide-default/30" />
 }
 
-function VirtualHeader(props: VirtuosoContextProps<Track>) {
+function ListHeader(props: VirtualHeaderProps) {
   return <div {...props} className="h-[calc(theme(spacing.10)+theme(spacing.16)+theme(spacing.4))]" />
 }
 
@@ -440,4 +357,8 @@ export function useTrackSelection() {
 
 function parseFilters(params: URLSearchParams) {
   return { album: params.get('album'), artist: params.get('artist') }
+}
+
+function getKey(item: Track) {
+  return item.hash
 }

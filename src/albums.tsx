@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { Card, CardFooter } from '@heroui/react'
 import { Disc3Icon } from 'lucide-react'
 import { getAlbums } from '@/tracks'
-import { Cover } from '@/tracks/components'
+import { Cover } from '@/tracks/components/details'
 
 export function AlbumsScreen() {
   const query = useQuery({ queryKey: ['albums'], queryFn: getAlbums })

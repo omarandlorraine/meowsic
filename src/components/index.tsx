@@ -1,5 +1,5 @@
 import { useStore } from 'zustand'
-import { Checkbox, Chip, Input } from '@heroui/react'
+import { cn, Checkbox, Chip, Input } from '@heroui/react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { SearchIcon } from 'lucide-react'
 import { Player } from '@/player/components'
@@ -51,6 +51,19 @@ export function SelectAllControls<T>({ selection, data }: SelectAllControlsProps
         {selection.values.length}
       </Chip>
     </div>
+  )
+}
+
+export function AppBar({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      {...props}
+      className={cn(
+        'px-6 h-16 flex items-center gap-3 rounded-small absolute top-[calc(theme(spacing.10)+theme(spacing.2))] left-0 right-3',
+        'bg-default-50/25 backdrop-blur-lg z-50 backdrop-saturate-125',
+        className,
+      )}
+    />
   )
 }
 

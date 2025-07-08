@@ -2,8 +2,8 @@ import { Button } from '@heroui/react'
 import { Trash2Icon } from 'lucide-react'
 import { reorder } from '@/utils'
 import { usePlayer } from '@/player'
-import { SelectAllControls } from '@/components'
-import { ControlsContainer, List, ListItem, useTrackSelection } from '@/tracks/components'
+import { AppBar, SelectAllControls } from '@/components'
+import { List, ListItem, useTrackSelection } from '@/tracks/components'
 import { useTrackDetails } from '@/tracks/components/details'
 import type { DropResult } from '@hello-pangea/dnd'
 
@@ -60,7 +60,7 @@ export function QueueScreen() {
 
   return (
     <div className="flex flex-col size-full relative">
-      <ControlsContainer>
+      <AppBar>
         {selection.values.length > 0 && (
           <>
             <SelectAllControls data={player.queue} selection={selection} />
@@ -77,7 +77,7 @@ export function QueueScreen() {
           isDisabled={!player.queue.length}>
           <Trash2Icon className="text-lg" /> Remove {selection.values.length > 0 ? 'Selected' : 'All'}
         </Button>
-      </ControlsContainer>
+      </AppBar>
 
       <List data={player.queue} onDragEnd={onDragEnd}>
         {(item, index, draggableProps) => (

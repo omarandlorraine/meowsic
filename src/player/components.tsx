@@ -18,8 +18,7 @@ import { formatTime, getAssetUrl } from '@/utils'
 import { store, setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
 import { usePlayer } from '@/player'
 import { normalizeMeta } from '@/tracks'
-import { Cover } from '@/tracks/components'
-import { AlbumLink, ArtistLink } from '@/tracks/components/details'
+import { AlbumLink, ArtistLink, Cover } from '@/tracks/components/details'
 
 type PlayerProps = { mini?: boolean }
 

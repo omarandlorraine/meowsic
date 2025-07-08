@@ -10,6 +10,7 @@ export default defineConfig(async () => ({
   publicDir: path.resolve(__dirname, 'assets'),
   build: {
     outDir: path.resolve(__dirname, 'build'),
+    chunkSizeWarningLimit: 2000,
     target: 'esnext',
   },
   resolve: {

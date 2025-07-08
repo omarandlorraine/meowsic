@@ -19,8 +19,8 @@ import { DEFAULT_EMOTION, store, setEmotion, setMiniPlayerVisibility, setPlayerM
 import { usePlayer } from '@/player'
 import { getEmotions, getEmotionTracks } from '@/emotions'
 import { createSearchIndex } from '@/tracks'
-import { SearchBar } from '@/components'
-import { ControlsContainer, ListItem, List } from '@/tracks/components'
+import { AppBar, SearchBar } from '@/components'
+import { ListItem, List } from '@/tracks/components'
 import { useTrackDetails } from '@/tracks/components/details'
 import type { Track } from '@/tracks'
 
@@ -72,7 +72,7 @@ export function EmotionScreen() {
 
   return (
     <div className="flex flex-col size-full relative">
-      <ControlsContainer>
+      <AppBar>
         <Button as={Link} to="/emotions" isIconOnly radius="sm" variant="flat">
           <MoveLeftIcon className="text-lg" />
         </Button>
@@ -99,7 +99,7 @@ export function EmotionScreen() {
         </div>
 
         <SearchBar value={searchQuery} onChange={setSearchQuery} className="w-120 ml-auto" />
-      </ControlsContainer>
+      </AppBar>
 
       <List data={filtered}>
         {(item, index, draggableProps) => (

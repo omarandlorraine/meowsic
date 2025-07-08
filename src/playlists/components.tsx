@@ -17,8 +17,8 @@ import {
   reorderPlaylistTrack,
 } from '@/playlists'
 import { createSearchIndex, type Track } from '@/tracks'
-import { SearchBar, SelectAllControls } from '@/components'
-import { useTrackSelection, ControlsContainer, ListItem, List } from '@/tracks/components'
+import { AppBar, SearchBar, SelectAllControls } from '@/components'
+import { useTrackSelection, ListItem, List } from '@/tracks/components'
 import { useTrackDetails } from '@/tracks/components/details'
 import type { DropResult } from '@hello-pangea/dnd'
 import type { EditorType } from '@/utils'
@@ -95,7 +95,7 @@ export function PlaylistScreen() {
 
   return (
     <div className="flex flex-col size-full relative">
-      <ControlsContainer>
+      <AppBar>
         {selection.values.length > 0 ? (
           <>
             <SelectAllControls data={filtered} selection={selection} />
@@ -151,7 +151,7 @@ export function PlaylistScreen() {
             <SearchBar value={searchQuery} onChange={setSearchQuery} className="w-120 ml-auto" />
           </>
         )}
-      </ControlsContainer>
+      </AppBar>
 
       <List data={filtered} onDragEnd={onDragEnd} isDragDisabled={filtered.length !== queryPlaylistTracks.data?.length}>
         {(item, index, draggableProps) => (

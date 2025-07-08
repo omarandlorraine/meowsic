@@ -1,10 +1,10 @@
 import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
+import { invoke } from '@tauri-apps/api/core'
 import { Card as ExternalCard, CardFooter } from '@heroui/react'
 import { UserRoundIcon } from 'lucide-react'
 import { getArtists } from '@/tracks'
-import { Cover } from '@/tracks/components'
-import { invoke } from '@tauri-apps/api/core'
+import { Cover } from '@/tracks/components/details'
 
 export function ArtistsScreen() {
   const query = useQuery({ queryKey: ['artists'], queryFn: getArtists })
