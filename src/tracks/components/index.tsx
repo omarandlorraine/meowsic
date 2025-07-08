@@ -29,14 +29,14 @@ import {
 import { Virtuoso } from 'react-virtuoso'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { useDebounce } from 'use-debounce'
-import { formatTime, getAssetUrl, useSelection } from '@/utils'
+import { getAssetUrl, useSelection } from '@/utils'
 import { setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
 import { extendQueue, usePlayer } from '@/player'
 import { createSearchIndex, getTracks, normalizeMeta } from '@/tracks'
 import { addPlaylist, addPlaylistTracks, getPlaylists } from '@/playlists'
 import { SearchBar, SelectAllControls } from '@/components'
 import { PlaylistEditorModal } from '@/playlists/components'
-import { useTrackDetails } from '@/tracks/components/details'
+import { AlbumLink, ArtistLink, PropertyText, useTrackDetails } from '@/tracks/components/details'
 import type { ItemProps as VirtuosoItemProps, ContextProp as VirtuosoContextProps } from 'react-virtuoso'
 import type { DraggableProvided, DraggableStateSnapshot, DropResult, DraggableRubric } from '@hello-pangea/dnd'
 import type { LucideIcon } from 'lucide-react'
@@ -335,19 +335,14 @@ export const ListItem = memo(
           <div className="flex items-center gap-2">{meta.title}</div>
 
           <div className="flex items-center gap-2">
-            <div className="text-default-500 flex items-center gap-2 text-small">
-              <ClockIcon /> {formatTime(data.duration)}
-            </div>
+            <PropertyText>
+              <ClockIcon /> {meta.duration}
+            </PropertyText>
 
             {meta.album && meta.artist && (
               <>
-                <div className="text-default-500 flex items-center gap-2 text-small pl-2 border-l border-default/30">
-                  <Disc3Icon /> {meta.album}
-                </div>
-
-                <div className="text-default-500 flex items-center gap-2 text-small">
-                  <UserRoundIcon /> {meta.artist}
-                </div>
+                <AlbumLink className="pl-2 border-l border-default/30">{meta.album}</AlbumLink>
+                <ArtistLink>{meta.artist}</ArtistLink>
               </>
             )}
           </div>

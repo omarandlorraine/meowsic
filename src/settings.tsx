@@ -133,7 +133,7 @@ export function SettingsScreen() {
 
           <button
             onClick={() => openUrl('https://github.com/CyanFroste/meowsic/blob/master/LICENSE')}
-            className="self-start text-secondary-700 mb-6 hover:cursor-pointer">
+            className="self-start text-secondary-700 mb-6 cursor-pointer">
             View full license
           </button>
 

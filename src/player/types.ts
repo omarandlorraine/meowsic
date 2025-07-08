@@ -41,14 +41,22 @@ export class BackendPlayer implements Player {
 
 export class WebPlayer implements Player {
   associated = []
+
   player = new Audio()
+  error: Error | null = null
+
   queue: string[] = []
   current = 0
 
-  // constructor() {
-  //   this.player.controls = true
-  //   document.body.appendChild(this.player)
-  // }
+  constructor() {
+    this.player.addEventListener('error', () => {
+      this.error = normalizeMediaError(this.player.error)
+    })
+
+    // DEBUG - show controls
+    // this.player.controls = true
+    // document.body.appendChild(this.player)
+  }
 
   load(src: string | null) {
     this.player.src = src ? getAssetUrl(src) : ''
@@ -90,12 +98,28 @@ export class WebPlayer implements Player {
   }
 
   async getDuration() {
-    return new Promise<number>(resolve => {
+    return new Promise<number>((resolve, reject) => {
       const resolveData = () => resolve(Math.round(this.player.duration))
-
       if (!isNaN(this.player.duration)) return resolveData()
+
       this.player.addEventListener('loadedmetadata', resolveData, { once: true })
+      this.player.addEventListener('error', () => reject(normalizeMediaError(this.player.error)), { once: true })
     })
+  }
+}
+
+function normalizeMediaError(error: MediaError | null) {
+  switch (error?.code) {
+    case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+      return new Error('Media source not supported or found')
+    case MediaError.MEDIA_ERR_ABORTED:
+      return new Error('Playback aborted')
+    case MediaError.MEDIA_ERR_NETWORK:
+      return new Error('Network error')
+    case MediaError.MEDIA_ERR_DECODE:
+      return new Error('Decoding error')
+    default:
+      return new Error('Unknown error')
   }
 }
 

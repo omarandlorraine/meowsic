@@ -1,5 +1,6 @@
+import { Link } from 'react-router'
 import { createStore, useStore } from 'zustand'
-import { Modal, ModalContent, ModalHeader, ModalBody } from '@heroui/react'
+import { Modal, ModalContent, ModalHeader, ModalBody, cn } from '@heroui/react'
 import { CalendarIcon, ClockIcon, Disc3Icon, TagIcon, UserRoundIcon } from 'lucide-react'
 import { Cover } from '@/tracks/components'
 import { normalizeMeta } from '@/tracks'
@@ -20,38 +21,29 @@ export function TrackDetailsModal() {
             <div className="flex flex-col gap-2">
               {meta.title && <div className="text-large">{meta.title}</div>}
 
-              {meta.album && (
-                <div className="text-default-500 flex items-center gap-2 text-small">
-                  <Disc3Icon /> {meta.album}
-                </div>
-              )}
+              {meta.album && <AlbumLink onClick={hide}>{meta.album}</AlbumLink>}
+              {meta.artist && <ArtistLink onClick={hide}>{meta.artist}</ArtistLink>}
 
-              {meta.artist && (
-                <div className="text-default-500 flex items-center gap-2 text-small">
-                  <UserRoundIcon /> {meta.artist}
-                </div>
-              )}
-
-              <div className="text-default-500 flex items-center gap-2 text-small">
+              <PropertyText>
                 <ClockIcon /> {meta.duration}
-              </div>
+              </PropertyText>
 
               {meta.genre && (
-                <div className="text-default-500 flex items-center gap-2 text-small mt-auto">
+                <PropertyText className="mt-auto">
                   <TagIcon /> {meta.genre}
-                </div>
+                </PropertyText>
               )}
 
               {meta.date && (
-                <div className="text-default-500 flex items-center gap-2 text-small">
+                <PropertyText>
                   <CalendarIcon /> {meta.date}
-                </div>
+                </PropertyText>
               )}
             </div>
           </div>
 
           <div className="flex flex-col gap-2 py-3">
-            <Pair label="Name" value={data?.name} />
+            <Pair label="File Name" value={data?.name} />
             <Pair label="File Path" value={data?.path} />
             <Pair label="Hash" value={data?.hash} />
             <Pair label="Extension" value={data?.extension} />
@@ -60,6 +52,41 @@ export function TrackDetailsModal() {
         </ModalBody>
       </ModalContent>
     </Modal>
+  )
+}
+
+type PropertyTextProps = { link?: string; children: React.ReactNode; className?: string; onClick?: () => void }
+
+export function PropertyText({ link, children, className, onClick }: PropertyTextProps) {
+  const Component = link ? Link : 'div'
+
+  return (
+    <Component
+      to={link ?? ''}
+      onClick={onClick}
+      className={cn(
+        'text-default-500 flex items-center gap-2 text-small',
+        link && 'hover:text-secondary-700 transition-colors cursor-pointer',
+        className,
+      )}>
+      {children}
+    </Component>
+  )
+}
+
+export function AlbumLink({ children, ...props }: PropertyTextProps) {
+  return (
+    <PropertyText {...props} link={`/tracks?album=${children}`}>
+      <Disc3Icon /> {children}
+    </PropertyText>
+  )
+}
+
+export function ArtistLink({ children, ...props }: PropertyTextProps) {
+  return (
+    <PropertyText {...props} link={`/tracks?artist=${children}`}>
+      <UserRoundIcon /> {children}
+    </PropertyText>
   )
 }
 

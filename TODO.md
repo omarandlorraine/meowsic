@@ -5,16 +5,16 @@
 - [ ] lyrics manager
 - [ ] assets manager
 - [ ] animations
-- [ ] persist list position
 - [ ] external media playback
 - [ ] better screen size support
 - [ ] optimization of grid by arranging grid cols as fixed height rows
 - [ ] optimizations (memo, etc.)
-- [ ] playlist export
+- [ ] playlist import/export
 - [ ] logo
 - [ ] guides
 - [ ] toolips and toasts
 - [ ] layout customization
+- [ ] playback rules (like start from x, end at y, play at x speed, y volume, etc.)
 - [x] track details screen
 - [x] smoother seekbar
 - [x] unsupported audio fallback to web audio
@@ -30,6 +30,7 @@
 - [x] better import fonts
 - [x] mini player
 - [ ] spacebar action (not possible without affecting focus behaviors)
+- [ ] persist list position?
 
 ## Fixes
 

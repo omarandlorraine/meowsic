@@ -164,20 +164,22 @@ export async function reset() {
 }
 
 function createInterval() {
-  return setInterval(() => {
-    const state = store.getState()
-    const current = state.queue.at(state.current)
+  return setInterval(progress, 1000)
+}
 
-    if (!current) return reset()
-    if (state.elapsed >= current.duration) return next()
+function progress() {
+  const state = store.getState()
+  const current = state.queue.at(state.current)
 
-    store.setState(state => ({ elapsed: state.elapsed + 1 }))
+  if (!current) return reset()
+  if (state.elapsed >= current.duration) return next()
 
-    // n seconds before the end, not awaiting the promise
-    if (isEmotionRankingAllowed(state.template) && current.duration - state.elapsed === 10) {
-      rankUp(current)
-    }
-  }, 1000)
+  store.setState(state => ({ elapsed: state.elapsed + 1 }))
+
+  // n seconds before the end, not awaiting the promise
+  if (isEmotionRankingAllowed(state.template) && current.duration - state.elapsed === 10) {
+    rankUp(current)
+  }
 }
 
 async function playArbitraryTracks(data: Track | Track[]) {
@@ -214,7 +216,9 @@ export function setRepeat(repeat: Repeat | null) {
 
 export async function extendQueue(tracks: Track[]) {
   const state = store.getState()
-  const queue = state.queue.concat(tracks)
+
+  const filtered = tracks.filter(track => !state.queue.includes(track))
+  const queue = state.queue.concat(filtered)
 
   await setQueue(queue)
   store.setState({ queue })

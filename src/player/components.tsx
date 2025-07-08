@@ -3,7 +3,6 @@ import { Link } from 'react-router'
 import { useStore } from 'zustand'
 import { Button, cn, Image, Slider, Tooltip } from '@heroui/react'
 import {
-  Disc3Icon,
   PauseIcon,
   PictureInPicture2Icon,
   PlayIcon,
@@ -13,7 +12,6 @@ import {
   SkipBackIcon,
   SkipForwardIcon,
   SquareArrowOutUpLeftIcon,
-  UserRoundIcon,
   XIcon,
 } from 'lucide-react'
 import { formatTime, getAssetUrl } from '@/utils'
@@ -21,6 +19,7 @@ import { store, setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
 import { usePlayer } from '@/player'
 import { normalizeMeta } from '@/tracks'
 import { Cover } from '@/tracks/components'
+import { AlbumLink, ArtistLink } from '@/tracks/components/details'
 
 type PlayerProps = { mini?: boolean }
 
@@ -56,17 +55,8 @@ export function Player({ mini }: PlayerProps) {
           <div className="flex flex-col gap-2">
             {meta.title && <div className="text-large">{meta.title}</div>}
 
-            {meta.album && (
-              <div className="text-default-500 flex items-center gap-2 text-small">
-                <Disc3Icon /> {meta.album}
-              </div>
-            )}
-
-            {meta.artist && (
-              <div className="text-default-500 flex items-center gap-2 text-small">
-                <UserRoundIcon /> {meta.artist}
-              </div>
-            )}
+            {meta.album && <AlbumLink>{meta.album}</AlbumLink>}
+            {meta.artist && <ArtistLink>{meta.artist}</ArtistLink>}
           </div>
         </div>
       ) : (
@@ -76,17 +66,8 @@ export function Player({ mini }: PlayerProps) {
           <div className="flex items-center gap-2 w-4/5 p-3">
             {meta.title && <div className="text-large mr-auto">{meta.title}</div>}
 
-            {meta.album && (
-              <div className="text-default-500 flex items-center gap-2 text-small">
-                <Disc3Icon /> {meta.album}
-              </div>
-            )}
-
-            {meta.artist && (
-              <div className="text-default-500 flex items-center gap-2 text-small">
-                <UserRoundIcon /> {meta.artist}
-              </div>
-            )}
+            {meta.album && <AlbumLink>{meta.album}</AlbumLink>}
+            {meta.artist && <ArtistLink>{meta.artist}</ArtistLink>}
           </div>
         </>
       )}
