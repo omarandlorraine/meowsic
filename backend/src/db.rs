@@ -63,7 +63,7 @@ impl Db {
     }
 
     pub async fn scan_dirs(&self, dirs: &[impl AsRef<Path>]) -> Result<String> {
-        let (tracks, errors) = tracks::scan(&dirs, &self.covers_path)?;
+        let (tracks, errors) = tracks::scan(dirs, &self.covers_path)?;
         let total = tracks.len() + errors.len();
 
         let mut qb = QueryBuilder::new(
@@ -259,7 +259,7 @@ impl Db {
         let existing: HashSet<String> = existing.into_iter().collect();
 
         let filtered: Vec<&str> = hashes
-            .into_iter()
+            .iter()
             .map(|x| x.as_ref())
             .filter(|&x| !existing.contains(x))
             .collect();

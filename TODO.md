@@ -6,15 +6,15 @@
 - [ ] assets manager
 - [ ] animations
 - [ ] external media playback
+- [ ] playlist import/export
+- [ ] layout customization
+- [ ] toolips and toasts
+- [ ] logo
+- [ ] guides
+- [ ] playback rules (like start from x, end at y, play at x speed, y volume, etc.)
 - [ ] better screen size support
 - [ ] optimization of grid by arranging grid cols as fixed height rows
 - [ ] optimizations (memo, etc.)
-- [ ] playlist import/export
-- [ ] logo
-- [ ] guides
-- [ ] toolips and toasts
-- [ ] layout customization
-- [ ] playback rules (like start from x, end at y, play at x speed, y volume, etc.)
 - [x] track details screen
 - [x] smoother seekbar
 - [x] unsupported audio fallback to web audio

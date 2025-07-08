@@ -159,7 +159,7 @@ pub fn scan(
             if !SUPPORTED.iter().any(|&x| {
                 path.extension()
                     .and_then(|x| x.to_str())
-                    .map_or(false, |ext| x.eq_ignore_ascii_case(ext))
+                    .is_some_and(|ext| x.eq_ignore_ascii_case(ext))
             }) {
                 continue;
             }
