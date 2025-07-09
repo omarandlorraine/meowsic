@@ -23,6 +23,8 @@
     "store:default",
     "dialog:default",
     "global-shortcut:allow-register",
+    "global-shortcut:allow-is-registered",
+    "global-shortcut:allow-unregister",
     {
       "identifier": "http:default",
       "allow": [{ "url": "*" }]

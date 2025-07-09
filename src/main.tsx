@@ -16,7 +16,10 @@ import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createBrowserRouter, RouterProvider } from 'react-router'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { register } from '@tauri-apps/plugin-global-shortcut'
+import {
+  register as registerGlobalShortcut,
+  isRegistered as isGlobalShortcutRegistered,
+} from '@tauri-apps/plugin-global-shortcut'
 import { ToastProvider } from '@heroui/react'
 import { init as initPlayer, onGlobalShortcut as onPlayerGlobalShortcut } from '@/player'
 import { Window } from '@/components/window'
@@ -80,5 +83,17 @@ try {
   await currentWindow.close()
 }
 
-document.addEventListener('contextmenu', evt => evt.preventDefault())
-await register(['MediaTrackNext', 'MediaTrackPrevious', 'MediaPlayPause', 'MediaStop'], onPlayerGlobalShortcut)
+document.addEventListener('contextmenu', evt => {
+  if (import.meta.env.PROD) evt.preventDefault()
+})
+
+window.addEventListener('keydown', evt => {
+  if (import.meta.env.PROD && evt.ctrlKey && evt.key.toLowerCase() === 'r') evt.preventDefault()
+})
+
+{
+  const keys = ['MediaTrackNext', 'MediaTrackPrevious', 'MediaPlayPause', 'MediaStop']
+  const promises = await Promise.all(keys.map(isGlobalShortcutRegistered))
+
+  if (!promises.every(Boolean)) await registerGlobalShortcut(keys, onPlayerGlobalShortcut)
+}
