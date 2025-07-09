@@ -19,6 +19,7 @@ export function SearchBar({ value, onChange, className }: SearchBarProps) {
       onClear={() => onChange('')}
       startContent={<SearchIcon className="text-lg text-default-500 flex-shrink-0 mr-1" />}
       classNames={{
+        // TODO: ? make this solid depending on background
         base: className,
         input: 'bg-transparent placeholder:text-default-300',
         innerWrapper: 'bg-transparent',

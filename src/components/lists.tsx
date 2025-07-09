@@ -5,6 +5,8 @@ import { cn } from '@heroui/react'
 import type { DraggableProvided, DraggableRubric, DraggableStateSnapshot, DropResult } from '@hello-pangea/dnd'
 import type { ItemProps as VirtuosoItemProps, ContextProp as VirtuosoContextProps } from 'react-virtuoso'
 
+const DEFAULT_OVERSCAN = 10
+
 type SortableVirtualListProps<T> = {
   data: T[]
   isDragDisabled?: boolean
@@ -15,8 +17,8 @@ type SortableVirtualListProps<T> = {
   onDragEnd?: OnDragEnd
   getItemKey: (item: T, index: number) => string
   components: {
-    List?: (props: VirtualListProps) => React.ReactNode
-    Header?: (props: VirtualHeaderProps) => React.ReactNode
+    Container?: (props: ContainerProps) => React.ReactNode
+    Header?: (props: HeaderProps) => React.ReactNode
   }
 }
 
@@ -27,9 +29,9 @@ export function SortableVirtualList<T>({
   isDragDisabled,
   getItemKey,
   renderClone,
-  components,
   className,
-  overscan = 5,
+  overscan = DEFAULT_OVERSCAN,
+  components: { Container, Header },
 }: SortableVirtualListProps<T>) {
   return (
     <DragDropContext onDragEnd={onDragEnd ?? (() => {})}>
@@ -42,7 +44,7 @@ export function SortableVirtualList<T>({
               scrollerRef={ref}
               data={data}
               overscan={overscan}
-              components={{ Item: VirtualItem, ...components }}
+              components={{ Item: VirtualItem, List: Container, Header }}
               className={cn('size-full shrink-0', className)}
               itemContent={(index, item) => {
                 if (isDragDisabled || !onDragEnd) return children(item, index)
@@ -59,6 +61,36 @@ export function SortableVirtualList<T>({
         }}
       </Droppable>
     </DragDropContext>
+  )
+}
+
+type VirtualListProps<T> = {
+  data: T[]
+  className?: string
+  overscan?: number
+  children: ListChildren<T>
+  components: {
+    Container?: (props: ContainerProps) => React.ReactNode
+    Header?: (props: HeaderProps) => React.ReactNode
+    Footer?: (props: FooterProps) => React.ReactNode
+  }
+}
+
+export function VirtualList<T>({
+  data,
+  children,
+  className,
+  overscan = DEFAULT_OVERSCAN,
+  components: { Container, Header, Footer },
+}: VirtualListProps<T>) {
+  return (
+    <Virtuoso
+      data={data}
+      overscan={overscan}
+      components={{ Item: VirtualItem, List: Container, Header, Footer }}
+      className={cn('size-full shrink-0', className)}
+      itemContent={(index, item) => children(item, index)}
+    />
   )
 }
 
@@ -84,11 +116,13 @@ function VirtualItem<T>({ item, ...props }: VirtualItemProps<T>) {
 
 export type DraggableProps = { provided: DraggableProvided; snapshot: DraggableStateSnapshot }
 
-export type VirtualHeaderProps<T = unknown> = VirtuosoContextProps<T>
+export type HeaderProps<T = unknown> = VirtuosoContextProps<T>
+export type FooterProps<T = unknown> = VirtuosoContextProps<T>
 
-export type VirtualListProps = React.HTMLAttributes<HTMLDivElement>
+export type ContainerProps = React.HTMLAttributes<HTMLDivElement>
 
 export type SortableListChildren<T> = (item: T, index: number, draggableProps?: DraggableProps) => React.ReactNode
+export type ListChildren<T> = (item: T, index: number) => React.ReactNode
 
 export type RenderDraggableClone = (
   provided: DraggableProvided,

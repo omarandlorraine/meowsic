@@ -40,8 +40,8 @@ import type {
   OnDragEnd,
   RenderDraggableClone,
   SortableListChildren,
-  VirtualHeaderProps,
-  VirtualListProps,
+  HeaderProps as ListHeaderProps,
+  ContainerProps as ListContainerProps,
 } from '@/components/lists'
 
 const searchIndex = createSearchIndex()
@@ -256,7 +256,7 @@ export function List({ data, children, onDragEnd, isDragDisabled }: ListProps) {
       getItemKey={getKey}
       children={children}
       renderClone={renderClone}
-      components={{ List: VirtualList, Header: ListHeader }}
+      components={{ Container: ListContainer, Header: ListHeader }}
     />
   )
 }
@@ -265,11 +265,11 @@ type ListItemProps = {
   data: Track
   isPlaying?: boolean
   isSelected?: boolean
-  onPlay?: (data: Track) => void
-  onToggleSelect?: (data: Track, previouslySelected?: boolean) => void
   index?: number
   draggableProps?: DraggableProps
+  onPlay?: (data: Track) => void
   onShowDetails?: (data: Track) => void
+  onToggleSelect?: (data: Track, previouslySelected?: boolean) => void
 }
 
 export const ListItem = memo(
@@ -343,11 +343,11 @@ export const ListItem = memo(
     prev.draggableProps === next.draggableProps,
 )
 
-function VirtualList(props: VirtualListProps) {
+function ListContainer(props: ListContainerProps) {
   return <div {...props} className="flex flex-col gap-1 px-3 shrink-0 w-full divide-y divide-default/30" />
 }
 
-function ListHeader(props: VirtualHeaderProps) {
+function ListHeader(props: ListHeaderProps) {
   return <div {...props} className="h-[calc(theme(spacing.10)+theme(spacing.16)+theme(spacing.4))]" />
 }
 
