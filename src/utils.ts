@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import { convertFileSrc } from '@tauri-apps/api/core'
 
-// tauri `convertFileSrc` won't work
 export function getAssetUrl(path: string) {
-  return `http://asset.localhost/${path}`
+  // return `http://asset.localhost/${path}`
+  return convertFileSrc(path)
 }
 
 export function formatTime(value?: number | null): string {

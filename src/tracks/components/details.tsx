@@ -70,7 +70,7 @@ export function Cover({ url, className, placeholder: Placeholder = MusicIcon, ex
   return (
     <Component
       {...(onClick && { type: 'button', onClick, disabled: !onClick })}
-      className={cn('rounded-small overflow-hidden', className)}>
+      className={cn('rounded-small overflow-hidden', onClick && 'cursor-pointer', className)}>
       {url ? (
         <Image
           isBlurred
