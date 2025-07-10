@@ -1,14 +1,26 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useDebounce } from 'use-debounce'
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, Input, useDisclosure } from '@heroui/react'
-import { CheckIcon, MoveLeftIcon, MoveRightIcon, PlayIcon, PlusIcon, SquarePenIcon, Trash2Icon } from 'lucide-react'
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  Input,
+  useDisclosure,
+  Code,
+  addToast,
+} from '@heroui/react'
+import { CheckIcon, CopyIcon, MoveLeftIcon, PlayIcon, PlusIcon, SquarePenIcon, Trash2Icon } from 'lucide-react'
 import { reorder, isEditorOfType } from '@/utils'
 import { setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
 import { usePlayer } from '@/player'
 import {
   addPlaylist,
+  addPlaylistTracks,
   getPlaylists,
   getPlaylistTracks,
   removePlaylist,
@@ -32,6 +44,7 @@ export function PlaylistScreen() {
   const player = usePlayer()
   const selection = useTrackSelection()
   const editorModal = useDisclosure()
+  const removeSelectedTracksModal = useDisclosure()
   const trackDetails = useTrackDetails()
   const [editorType, setEditorType] = useState<EditorType | null>(null)
 
@@ -101,7 +114,12 @@ export function PlaylistScreen() {
             <SelectAllControls data={filtered} selection={selection} />
             <div className="h-5 border-r border-default/30" />
 
-            <Button radius="sm" variant="flat" color="danger" className="!text-foreground" onPress={onRemoveTracks}>
+            <Button
+              radius="sm"
+              variant="flat"
+              color="danger"
+              className="!text-foreground"
+              onPress={removeSelectedTracksModal.onOpen}>
               <Trash2Icon className="text-lg" /> Remove Selected
             </Button>
           </>
@@ -169,6 +187,33 @@ export function PlaylistScreen() {
         )}
       </List>
 
+      <Modal
+        radius="sm"
+        backdrop="blur"
+        placement="bottom-center"
+        isOpen={removeSelectedTracksModal.isOpen}
+        onOpenChange={removeSelectedTracksModal.onOpenChange}>
+        <ModalContent>
+          <ModalHeader>Remove Selected Tracks</ModalHeader>
+
+          <ModalBody>
+            <div className="text-default-500">
+              Are you sure you want to remove
+              <Code radius="sm" className="mx-1.5">
+                {selection.values.length}
+              </Code>
+              track{selection.values.length > 1 && 's'} from this playlist?
+            </div>
+          </ModalBody>
+
+          <ModalFooter>
+            <Button radius="sm" variant="flat" onPress={onRemoveTracks} color="danger">
+              <CheckIcon className="text-lg" /> Remove
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
       {params.name && (
         <>
           <PlaylistEditorModal
@@ -204,8 +249,38 @@ export function PlaylistScreen() {
 }
 
 export function PlaylistsScreen() {
-  const query = useQuery({ queryKey: ['playlists'], queryFn: getPlaylists })
+  const navigate = useNavigate()
+  const player = usePlayer()
   const editorModal = useDisclosure()
+
+  const query = useQuery({ queryKey: ['playlists'], queryFn: getPlaylists })
+
+  const mutationCopy = useMutation({
+    mutationFn: async (src: string) => {
+      let name = generateCopyName(src, query.data)
+      await addPlaylist(name)
+
+      const tracks = await getPlaylistTracks(src)
+      await addPlaylistTracks(name, tracks)
+
+      return name
+    },
+    onSuccess: name => {
+      query.refetch()
+      navigate(`/playlists/${name}`)
+    },
+  })
+
+  const onPlay = async (name: string) => {
+    const tracks = await getPlaylistTracks(name)
+    if (!tracks.length) return addToast({ description: 'Empty Playlist' })
+
+    await player.playTracks(tracks)
+    player.setTemplate(null)
+
+    setPlayerMaximized(true)
+    setMiniPlayerVisibility(true)
+  }
 
   return (
     <>
@@ -218,20 +293,31 @@ export function PlaylistsScreen() {
           </Button>
         </div>
 
-        <div className="flex flex-col px-3 shrink-0 w-full relative gap-1">
+        <div className="flex flex-col px-3 shrink-0 w-full relative divide-y divide-default/30">
           {query.isSuccess &&
             query.data.map(name => (
-              <div key={name} className="flex items-center px-3">
+              <div key={name} className="flex items-center p-3 gap-3">
+                <Button isIconOnly radius="full" variant="flat" color="secondary" onPress={() => onPlay(name)}>
+                  <PlayIcon className="text-lg" />
+                </Button>
+
+                <Button
+                  isIconOnly
+                  radius="sm"
+                  variant="light"
+                  onPress={() => mutationCopy.mutate(name)}
+                  isDisabled={mutationCopy.isPending && mutationCopy.variables === name}>
+                  <CopyIcon className="text-medium text-default-500" />
+                </Button>
+
                 <Button
                   as={Link}
-                  to={`/playlists/${name}`}
                   size="lg"
                   radius="sm"
                   variant="light"
-                  color="secondary"
-                  className="!text-foreground min-w-60 justify-start">
-                  <MoveRightIcon className="text-lg" />
-                  <div className="mx-2">{name}</div>
+                  to={`/playlists/${name}`}
+                  className="min-w-60 justify-start">
+                  {name}
                 </Button>
               </div>
             ))}
@@ -256,21 +342,20 @@ type PlaylistEditorModalProps = {
   type: EditorType
   isOpen?: boolean
   onOpenChange: (value: boolean) => void
-  onAction: (name: string) => void
+  onAction: (name: string) => Promise<void>
   existing?: string | null
 }
 
 export function PlaylistEditorModal({ isOpen, onOpenChange, existing, type, onAction }: PlaylistEditorModalProps) {
-  const [name, setName] = useState(existing ?? '')
-
   const isOfType = (expected: EditorType) => isEditorOfType(type, expected)
+
+  const [name, setName] = useState(existing ?? '')
+  const title = isOfType('new') ? 'New Playlist' : isOfType('update') ? 'Edit Playlist' : 'Remove Playlist'
 
   return (
     <Modal isOpen={isOpen} placement="bottom-center" backdrop="blur" radius="sm" onOpenChange={onOpenChange}>
       <ModalContent>
-        <ModalHeader>
-          {isOfType('new') ? 'New Playlist' : isOfType('update') ? 'Edit Playlist' : 'Remove Playlist'}
-        </ModalHeader>
+        <ModalHeader>{title}</ModalHeader>
 
         <ModalBody>
           {isOfType('remove') ? (
@@ -293,13 +378,29 @@ export function PlaylistEditorModal({ isOpen, onOpenChange, existing, type, onAc
           <Button
             radius="sm"
             variant="flat"
-            onPress={() => onAction(name)}
             color={isOfType('remove') ? 'danger' : 'success'}
-            isDisabled={!name.trim() || (isOfType('update') && name === existing)}>
+            isDisabled={!name.trim() || (isOfType('update') && name === existing)}
+            onPress={async () => {
+              try {
+                await onAction(name)
+              } catch (err) {
+                addToast({ title, description: (err as Error).message, color: 'danger' })
+              }
+            }}>
             <CheckIcon className="text-lg" /> {isOfType('remove') ? 'Remove' : isOfType('new') ? 'Create' : 'Save'}
           </Button>
         </ModalFooter>
       </ModalContent>
     </Modal>
   )
+}
+
+function generateCopyName(src: string, existing?: string[] | null) {
+  let name = src + ' (Copy)'
+  if (!existing?.includes(name)) return name
+
+  let i = 0
+  while (existing?.includes(name)) name = `${src} (Copy ${(i += 1)})`
+
+  return name
 }

@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
+import { normalizeError as normalizeCoreError } from '@/utils'
 import type { Track } from '@/tracks'
 
 export async function getPlaylists() {
@@ -6,11 +7,19 @@ export async function getPlaylists() {
 }
 
 export async function addPlaylist(name: string) {
-  return await invoke('db_add_playlist', { name })
+  try {
+    return await invoke('db_add_playlist', { name })
+  } catch (err) {
+    throw normalizeError(err)
+  }
 }
 
 export async function renamePlaylist(name: string, newName: string) {
-  return await invoke('db_rename_playlist', { name, newName })
+  try {
+    return await invoke('db_rename_playlist', { name, newName })
+  } catch (err) {
+    throw normalizeError(err)
+  }
 }
 
 export async function removePlaylist(name: string) {
@@ -31,4 +40,13 @@ export async function removePlaylistTracks(name: string, tracks?: Track[] | null
 
 export async function reorderPlaylistTrack(name: string, track: Track, src: number, dst: number) {
   return await invoke('db_reorder_playlist_track', { name, hash: track.hash, src, dst })
+}
+
+function normalizeError(err: unknown) {
+  let error = normalizeCoreError(err)
+
+  if (error.message.includes('UNIQUE constraint failed: playlists.name'))
+    return new Error('A playlist with the same name already exists')
+
+  return error
 }

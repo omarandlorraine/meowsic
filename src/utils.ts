@@ -52,3 +52,16 @@ export type EditorType = 'new' | 'update' | 'remove'
 export function isEditorOfType(type: EditorType, expected: EditorType) {
   return type[0] === expected[0]
 }
+
+export function normalizeError(error: unknown) {
+  let message = 'Unknown error'
+  if (!error) return new Error(message)
+
+  if (error instanceof Error) message = error.message
+  else if (typeof error === 'string') message = error
+  else if (typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+    message = error.message
+  }
+
+  return new Error(message)
+}

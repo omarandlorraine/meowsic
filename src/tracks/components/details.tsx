@@ -25,12 +25,12 @@ export function TrackDetailsModal() {
               {meta.album && <AlbumLink onClick={hide}>{meta.album}</AlbumLink>}
               {meta.artist && <ArtistLink onClick={hide}>{meta.artist}</ArtistLink>}
 
-              <PropertyText>
+              <PropertyText className="mb-auto">
                 <ClockIcon /> {meta.duration}
               </PropertyText>
 
               {meta.genre && (
-                <PropertyText className="mt-auto">
+                <PropertyText>
                   <TagIcon /> {meta.genre}
                 </PropertyText>
               )}

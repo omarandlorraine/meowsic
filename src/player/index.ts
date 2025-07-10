@@ -115,6 +115,8 @@ export async function play() {
 
 export async function playTracks(data: Track | Track[], from = 0) {
   const queue = Array.isArray(data) ? data : [data]
+  // TODO: error handling (handling in the consumer side for now)
+  // if (!queue.length) throw new Error('No tracks to play')
 
   await setQueue(queue)
   store.setState({ queue, isShuffled: false, backupQueue: [] })

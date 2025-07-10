@@ -44,11 +44,7 @@ export function SelectAllControls<T>({ selection, data }: SelectAllControlsProps
         }}
       />
 
-      <Chip
-        variant="flat"
-        color="danger"
-        onClose={selection.clear}
-        classNames={{ base: '!text-foreground shrink-0 font-mono', closeButton: 'mx-0.5' }}>
+      <Chip variant="flat" onClose={selection.clear} classNames={{ base: 'shrink-0 font-mono', closeButton: 'mx-0.5' }}>
         {selection.values.length}
       </Chip>
     </div>
