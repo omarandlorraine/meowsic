@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Button, cn, Popover, PopoverContent, PopoverTrigger, Slider } from '@heroui/react'
+import { Link, matchRoutes, Outlet, useLocation, useNavigate } from 'react-router'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { Link, Outlet, useLocation } from 'react-router'
+import { Button, cn, Popover, PopoverContent, PopoverTrigger, Slider } from '@heroui/react'
 import { useStore } from 'zustand'
 import {
   Disc3Icon,
@@ -30,24 +30,27 @@ import { EmotionSelect } from '@/emotions/components'
 import type { LucideIcon } from 'lucide-react'
 
 export function Window() {
+  const navigate = useNavigate()
   const location = useLocation()
-  const currentWindow = getCurrentWindow()
-  const { isPlayerMaximized, isMiniPlayerVisible, volume: globalVolume } = useStore(store)
 
-  const [isMaximized, setIsMaximized] = useState(false)
+  const { isPlayerMaximized, isMiniPlayerVisible, volume: globalVolume } = useStore(store)
   const [volume, setVolume] = useState(globalVolume * 100)
 
   const isHome = location.pathname === '/'
   const showBars = !isPlayerMaximized || !isHome
+  const showMiniPlayer = isMiniPlayerVisible && !isHome && !matchRoutes([{ path: '/tracks/:hash' }], location.pathname)
 
   useHotkeys(
-    ['f', 'b'],
+    ['f', 'b', 'ctrl+h'],
     evt => {
       switch (evt.key) {
         case 'f':
           return setPlayerMaximized(!isPlayerMaximized)
         case 'b':
           return setMiniPlayerVisibility(!isMiniPlayerVisible)
+        case 'h':
+          setPlayerMaximized(true)
+          return navigate('/')
       }
     },
     [isPlayerMaximized, isMiniPlayerVisible],
@@ -126,31 +129,7 @@ export function Window() {
         </Popover>
 
         <div className="h-6 border-r border-default/30" />
-
-        <Button variant="light" radius="none" className="min-w-12" onPress={() => currentWindow.minimize()}>
-          <MinusIcon className="text-lg text-default-500" />
-        </Button>
-
-        <Button
-          variant="light"
-          radius="none"
-          className="min-w-12 text-default-500 text-lg"
-          onPress={() => {
-            currentWindow.toggleMaximize()
-            setIsMaximized(!isMaximized)
-          }}>
-          {isMaximized ? <ChevronsDownUpIcon className="rotate-45" /> : <ChevronsUpDownIcon className="rotate-45" />}
-        </Button>
-
-        <Button
-          isIconOnly
-          color="danger"
-          variant="light"
-          radius="none"
-          className="min-w-12"
-          onPress={() => currentWindow.close()}>
-          <XIcon className="text-lg text-default-500" />
-        </Button>
+        <WindowControls />
       </div>
 
       <div className="flex h-full">
@@ -173,9 +152,42 @@ export function Window() {
         <Outlet />
       </div>
 
-      {isMiniPlayerVisible && !isHome && <MiniPlayer />}
-
+      {showMiniPlayer && <MiniPlayer />}
       <TrackDetailsModal />
+    </>
+  )
+}
+
+function WindowControls() {
+  const currentWindow = getCurrentWindow()
+  const [isMaximized, setIsMaximized] = useState(false)
+
+  return (
+    <>
+      <Button variant="light" radius="none" className="min-w-12" onPress={() => currentWindow.minimize()}>
+        <MinusIcon className="text-lg text-default-500" />
+      </Button>
+
+      <Button
+        radius="none"
+        variant="light"
+        className="min-w-12 text-default-500 text-lg"
+        onPress={() => {
+          currentWindow.toggleMaximize()
+          setIsMaximized(!isMaximized)
+        }}>
+        {isMaximized ? <ChevronsDownUpIcon className="rotate-45" /> : <ChevronsUpDownIcon className="rotate-45" />}
+      </Button>
+
+      <Button
+        isIconOnly
+        color="danger"
+        variant="light"
+        radius="none"
+        className="min-w-12"
+        onPress={() => currentWindow.close()}>
+        <XIcon className="text-lg text-default-500" />
+      </Button>
     </>
   )
 }

@@ -1,12 +1,17 @@
 use crate::tracks;
-use crate::tracks::{Album, Track};
+use crate::tracks::{Album, Lyrics, Track};
+use crate::utils;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use serde_json::{Value as JsonValue, json};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Pool, QueryBuilder, Sqlite};
 use std::collections::HashSet;
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
+use zip::write::SimpleFileOptions as ZipFileOptions;
+use zip::{ZipArchive, ZipWriter};
 
 pub struct Db {
     pub covers_path: PathBuf,
@@ -60,6 +65,17 @@ impl Db {
         // }
 
         Ok(tracks)
+    }
+
+    pub async fn get_track(&self, hash: impl AsRef<str>) -> Result<Option<Track>> {
+        let entry: Option<TrackRow> = sqlx::query_as("SELECT * FROM tracks WHERE hash = $1")
+            .bind(hash.as_ref())
+            .fetch_optional(&self.pool)
+            .await?;
+
+        let track = entry.map(Track::from);
+
+        Ok(track)
     }
 
     pub async fn scan_dirs(&self, dirs: &[impl AsRef<Path>]) -> Result<String> {
@@ -349,6 +365,9 @@ impl Db {
         Ok(names)
     }
 
+    // TODO: api to clear emotions
+    // see also: restore()
+
     pub async fn get_emotion_tracks(&self, name: impl AsRef<str>) -> Result<Vec<Track>> {
         let entries: Vec<TrackRow> = sqlx::query_as(
             "
@@ -427,6 +446,41 @@ impl Db {
         Ok(artists)
     }
 
+    pub async fn get_lyrics(&self, hash: impl AsRef<str>) -> Result<Option<Lyrics>> {
+        let lyrics: Option<Lyrics> =
+            sqlx::query_as("SELECT plain, synced FROM lyrics WHERE track_hash = $1")
+                .bind(hash.as_ref())
+                .fetch_optional(&self.pool)
+                .await?;
+
+        Ok(lyrics)
+    }
+
+    pub async fn set_lyrics(&self, hash: impl AsRef<str>, lyrics: Option<&Lyrics>) -> Result<()> {
+        // NOTE: keeping lyrics table as a one to many relationship with tracks
+        // but treating it as a one to one relationship with tracks in application
+
+        let mut tx = self.pool.begin().await?;
+
+        sqlx::query("DELETE FROM lyrics WHERE track_hash = $1")
+            .bind(hash.as_ref())
+            .execute(&mut *tx)
+            .await?;
+
+        if let Some(lyrics) = lyrics.as_deref() {
+            sqlx::query("INSERT INTO lyrics (track_hash, plain, synced) VALUES ($1, $2, $3)")
+                .bind(hash.as_ref())
+                .bind(&lyrics.plain)
+                .bind(&lyrics.synced)
+                .execute(&mut *tx)
+                .await?;
+        }
+
+        tx.commit().await?;
+
+        Ok(())
+    }
+
     pub async fn get_dirs(&self) -> Result<Vec<String>> {
         let paths: Vec<String> = sqlx::query_scalar("SELECT path FROM dirs ORDER BY path ASC")
             .fetch_all(&self.pool)
@@ -447,6 +501,168 @@ impl Db {
         }
 
         tx.commit().await?;
+
+        Ok(())
+    }
+
+    pub async fn restore(&self, path: impl AsRef<Path>) -> Result<()> {
+        let reader = fs::File::open(path)?;
+        let mut zip = ZipArchive::new(reader)?;
+
+        for i in 0..zip.len() {
+            let file = zip.by_index(i)?;
+
+            if file.name().starts_with("playlist") {
+                let data: JsonValue = serde_json::from_reader(file)?;
+
+                if let (Some(name), Some(list)) = (data["name"].as_str(), data["list"].as_array()) {
+                    // NOTE: doing one transaction per playlist
+                    let mut tx = self.pool.begin().await?;
+                    let playlist_name = format!("{name} (Restored)"); // TODO: time suffix
+
+                    let mut qb = QueryBuilder::new(
+                        "INSERT INTO playlist_tracks (playlist_name, track_hash, position) ",
+                    );
+
+                    qb.push_values(list.iter().take(32000), |mut b, json| {
+                        if let (Some(file_name), Some(position)) =
+                            (json["file_name"].as_str(), json["position"].as_i64())
+                        {
+                            let hash = utils::hash(file_name.as_bytes());
+
+                            b.push_bind(&playlist_name)
+                                .push_bind(hash)
+                                .push_bind(position);
+                        }
+                    });
+
+                    sqlx::query("INSERT INTO playlists (name) VALUES ($1)")
+                        .bind(&playlist_name)
+                        .execute(&mut *tx)
+                        .await?;
+
+                    qb.build().execute(&mut *tx).await?;
+                    tx.commit().await?;
+                }
+            } else if file.name().starts_with("emotion") {
+                let data: JsonValue = serde_json::from_reader(file)?;
+
+                if let (Some(name), Some(list)) = (data["name"].as_str(), data["list"].as_array()) {
+                    let mut qb = QueryBuilder::new(
+                        "INSERT OR IGNORE INTO emotion_tracks (emotion_name, track_hash, rank) ",
+                    );
+
+                    qb.push_values(list.iter().take(32000), |mut b, json| {
+                        if let (Some(file_name), Some(rank)) =
+                            (json["file_name"].as_str(), json["rank"].as_i64())
+                        {
+                            let hash = utils::hash(file_name.as_bytes());
+
+                            b.push_bind(name).push_bind(hash).push_bind(rank);
+                        }
+                    });
+
+                    qb.build().execute(&self.pool).await?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    pub async fn backup(&self, dir: impl AsRef<Path>) -> Result<PathBuf> {
+        // TODO: ? access app name from config
+        let path = dir.as_ref().join("meowsic_backup.zip");
+
+        let file = fs::File::create(&path)?;
+        let mut zip = ZipWriter::new(file);
+
+        for (index, playlist) in self.get_playlists().await?.iter().enumerate() {
+            let list: Vec<(String, String, i64)> = sqlx::query_as(
+                "
+                SELECT t.name, t.extension, pt.position
+                FROM tracks AS t
+                JOIN playlist_tracks AS pt ON pt.track_hash = t.hash
+                WHERE pt.playlist_name = $1                
+                ",
+            )
+            .bind(playlist)
+            .fetch_all(&self.pool)
+            .await?;
+
+            if list.is_empty() {
+                continue;
+            }
+
+            let data = json!({
+                "name": playlist,
+                "list": list.into_iter().map(|(name, extension, position)| json!({
+                    "file_name": format!("{name}.{extension}"),
+                    "position": position
+                })).collect::<Vec<_>>(),
+            });
+
+            zip.start_file(format!("playlist_{index}.json"), ZipFileOptions::default())?;
+            zip.write_all(serde_json::to_string(&data)?.as_bytes())?;
+        }
+
+        for emotion in self.get_emotions().await? {
+            let name = emotion.name;
+
+            let list: Vec<(String, String, i64)> = sqlx::query_as(
+                "
+                SELECT t.name, t.extension, et.rank
+                FROM tracks AS t
+                JOIN emotion_tracks AS et ON et.track_hash = t.hash
+                WHERE et.emotion_name = $1                
+                ",
+            )
+            .bind(&name)
+            .fetch_all(&self.pool)
+            .await?;
+
+            if list.is_empty() {
+                continue;
+            }
+
+            let data = json!({
+                "name": name,
+                "list": list.into_iter().map(|(name, extension, rank)| json!({
+                    "file_name": format!("{name}.{extension}"),
+                    "rank": rank
+                })).collect::<Vec<_>>(),
+            });
+
+            zip.start_file(format!("emotion_{name}.json"), ZipFileOptions::default())?;
+            zip.write_all(serde_json::to_string(&data)?.as_bytes())?;
+        }
+
+        // TODO: lyrics
+
+        zip.finish()?;
+
+        Ok(path)
+    }
+
+    pub async fn reset(&self) -> Result<()> {
+        _ = fs::remove_dir_all(&self.covers_path);
+
+        // TODO: have to see if this is safe
+        _ = sqlx::query(
+            "
+            DROP TABLE IF EXISTS dirs;
+            DROP TABLE IF EXISTS tracks;
+            DROP TABLE IF EXISTS playlists;
+            DROP TABLE IF EXISTS emotions;
+            DROP TABLE IF EXISTS lyrics;
+            DROP TABLE IF EXISTS playlist_tracks;
+            DROP TABLE IF EXISTS emotion_tracks;
+            ",
+        )
+        .execute(&self.pool)
+        .await;
+
+        self.init().await?;
 
         Ok(())
     }

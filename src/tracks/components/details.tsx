@@ -1,9 +1,14 @@
-import { Link } from 'react-router'
+import { useEffect } from 'react'
+import { Link, useParams } from 'react-router'
+import { useQuery } from '@tanstack/react-query'
+import { invoke } from '@tauri-apps/api/core'
 import { createStore, useStore } from 'zustand'
-import { Modal, ModalContent, ModalHeader, ModalBody, cn, Image } from '@heroui/react'
+import { Modal, ModalContent, ModalHeader, ModalBody, cn, Image, ModalFooter, Button } from '@heroui/react'
 import { CalendarIcon, ClockIcon, Disc3Icon, MusicIcon, TagIcon, UserRoundIcon } from 'lucide-react'
 import { getAssetUrl } from '@/utils'
 import { normalizeMeta } from '@/tracks'
+import { usePlayer } from '@/player'
+import { Player } from '@/player/components'
 import type { LucideIcon } from 'lucide-react'
 import type { Track } from '@/tracks'
 
@@ -15,6 +20,7 @@ export function TrackDetailsModal() {
     <Modal isOpen={!!data} onClose={hide} placement="bottom-center" backdrop="blur" radius="sm" size="3xl">
       <ModalContent>
         <ModalHeader>Track Details</ModalHeader>
+
         <ModalBody className="flex flex-col gap-3">
           <div className="flex w-full gap-3">
             <Cover url={data?.cover} className="size-60 shrink-0" />
@@ -51,6 +57,12 @@ export function TrackDetailsModal() {
             {data?.rank && <Pair label="Emotion Rank" value={data.rank} />}
           </div>
         </ModalBody>
+
+        <ModalFooter>
+          <Button as={Link} radius="sm" variant="flat" isDisabled={!data} to={`/tracks/${data?.hash}`} onPress={hide}>
+            Manage
+          </Button>
+        </ModalFooter>
       </ModalContent>
     </Modal>
   )
@@ -147,4 +159,43 @@ export function useTrackDetails() {
     show: (data: Track) => store.setState(data),
     hide: () => store.setState(null),
   }
+}
+
+export function TrackScreen() {
+  const params = useParams<{ hash: string }>()
+  const player = usePlayer()
+
+  const query = useQuery({
+    queryKey: ['track', params.hash],
+    queryFn: async () => await getTrack(params.hash!),
+    enabled: !!params.hash,
+  })
+
+  useEffect(() => {
+    ;(async () => {
+      if (!query.data) return
+
+      const queue = [query.data]
+      await player.setQueue(queue)
+
+      player.setState({ queue, repeat: 'current' })
+      await player.goto(0)
+    })()
+  }, [query.data])
+
+  return (
+    <div className="pt-[calc(theme(spacing.10))] overflow-auto size-full flex flex-col">
+      {query.isSuccess && query.data && (
+        <div className="p-3 flex flex-col gap-3">
+          <div className="w-1/2 mx-auto">
+            <Player mini scrubber />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+async function getTrack(hash: string) {
+  return await invoke<Track | null>('db_get_track', { hash })
 }

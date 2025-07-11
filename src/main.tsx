@@ -25,6 +25,7 @@ import { init as initPlayer, onGlobalShortcut as onPlayerGlobalShortcut } from '
 import { Window } from '@/components/window'
 import { HomeScreen } from '@/components'
 import { TracksScreen } from '@/tracks/components'
+import { TrackScreen } from '@/tracks/components/details'
 import { PlaylistsScreen, PlaylistScreen } from '@/playlists/components'
 import { EmotionsScreen, EmotionScreen } from '@/emotions/components'
 import { QueueScreen } from '@/queue'
@@ -42,6 +43,7 @@ const router = createBrowserRouter([
       { path: '/', Component: HomeScreen },
       { path: '/queue', Component: QueueScreen },
       { path: '/tracks', Component: TracksScreen },
+      { path: '/tracks/:hash', Component: TrackScreen },
       { path: '/playlists', Component: PlaylistsScreen },
       { path: '/playlists/:name', Component: PlaylistScreen },
       { path: '/emotions', Component: EmotionsScreen },
@@ -70,7 +72,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <ToastProvider
         toastOffset={40}
         placement="top-center"
-        toastProps={{ radius: 'sm', classNames: { description: 'whitespace-pre-wrap pt-1' } }}
+        toastProps={{ radius: 'sm', classNames: { description: 'whitespace-pre-wrap not-empty:pt-1' } }}
       />
     </QueryClientProvider>
   </React.StrictMode>,

@@ -196,14 +196,12 @@ export function PlaylistScreen() {
         <ModalContent>
           <ModalHeader>Remove Selected Tracks</ModalHeader>
 
-          <ModalBody>
-            <div className="text-default-500">
-              Are you sure you want to remove
-              <Code radius="sm" className="mx-1.5">
-                {selection.values.length}
-              </Code>
-              track{selection.values.length > 1 && 's'} from this playlist?
-            </div>
+          <ModalBody className="text-default-500">
+            Are you sure you want to remove
+            <Code radius="sm" className="mx-1.5">
+              {selection.values.length}
+            </Code>
+            track{selection.values.length > 1 && 's'} from this playlist?
           </ModalBody>
 
           <ModalFooter>
@@ -273,7 +271,7 @@ export function PlaylistsScreen() {
 
   const onPlay = async (name: string) => {
     const tracks = await getPlaylistTracks(name)
-    if (!tracks.length) return addToast({ description: 'Empty Playlist' })
+    if (!tracks.length) return addToast({ title: 'Empty Playlist' })
 
     await player.playTracks(tracks)
     player.setTemplate(null)

@@ -4,17 +4,13 @@
 
 - [ ] lyrics manager
 - [ ] assets manager
-- [ ] animations
-- [ ] external media playback
 - [ ] playlist import/export
+- [ ] playback rules (like start from x, end at y, play at x speed, y volume, etc.)
+- [ ] external media playback
 - [ ] layout customization
 - [ ] toolips and toasts
-- [ ] logo
 - [ ] guides
-- [ ] playback rules (like start from x, end at y, play at x speed, y volume, etc.)
-- [ ] better screen size support
-- [ ] optimization of grid by arranging grid cols as fixed height rows
-- [ ] optimizations (memo, etc.)
+- [ ] load tracks from zip
 - [x] track details screen
 - [x] smoother seekbar
 - [x] unsupported audio fallback to web audio
@@ -35,5 +31,10 @@
 ## Fixes
 
 - [ ] error handling
+- [ ] better screen size support
+- [ ] optimization of grid by arranging grid cols as fixed height rows
+- [ ] optimizations (memo, etc.)
+- [ ] better animations
+- [ ] better logo
 - [x] handle playback errors
 - [x] `Add to Queue` won't work under Tracks

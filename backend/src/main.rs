@@ -98,6 +98,7 @@ async fn main() -> Result<()> {
             commands::player_set_volume,
             commands::player_get_arbitrary_tracks,
             commands::db_get_tracks,
+            commands::db_get_track,
             commands::db_get_playlists,
             commands::db_add_playlist,
             commands::db_rename_playlist,
@@ -111,9 +112,14 @@ async fn main() -> Result<()> {
             commands::db_rank_up_emotion_track,
             commands::db_get_albums,
             commands::db_get_artists,
+            commands::db_get_lyrics,
+            commands::db_set_lyrics,
             commands::db_scan_dirs,
             commands::db_get_dirs,
             commands::db_set_dirs,
+            commands::db_backup,
+            commands::db_restore,
+            commands::db_reset,
             commands::tracks_find_artist_image,
         ])
         .run(tauri::generate_context!())?;

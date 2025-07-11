@@ -28,7 +28,9 @@ CREATE TABLE IF NOT EXISTS playlist_tracks (
 
     PRIMARY KEY (playlist_name, track_hash),
     FOREIGN KEY (playlist_name) REFERENCES playlists(name)
-        ON DELETE CASCADE ON UPDATE CASCADE
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (track_hash) REFERENCES tracks(hash)
+        ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS emotions (
@@ -44,7 +46,9 @@ CREATE TABLE IF NOT EXISTS emotion_tracks (
 
     PRIMARY KEY (emotion_name, track_hash),
     FOREIGN KEY (emotion_name) REFERENCES emotions(name)
-        ON DELETE CASCADE ON UPDATE CASCADE
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (track_hash) REFERENCES tracks(hash)
+        ON UPDATE CASCADE
 );
 
 INSERT OR IGNORE INTO emotions 
@@ -56,3 +60,13 @@ VALUES
     ('Angry', '#d93025', 'angry.png'),
     ('Serene', '#a8d8b9', 'serene.png'),    
     ('Neutral', '#fff1e6', 'neutral.png');
+
+CREATE TABLE IF NOT EXISTS lyrics (
+    id              INTEGER     PRIMARY KEY AUTOINCREMENT,
+    track_hash      TEXT        NOT NULL,
+    plain           TEXT        NOT NULL,
+    synced          TEXT        NOT NULL,
+
+    FOREIGN KEY (track_hash) REFERENCES tracks(hash)
+        ON UPDATE CASCADE
+);

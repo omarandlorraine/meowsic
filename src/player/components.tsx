@@ -8,6 +8,7 @@ import {
   PlayIcon,
   Repeat1Icon,
   RepeatIcon,
+  RotateCcwIcon,
   ShuffleIcon,
   SkipBackIcon,
   SkipForwardIcon,
@@ -19,10 +20,11 @@ import { store, setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
 import { usePlayer } from '@/player'
 import { normalizeMeta } from '@/tracks'
 import { AlbumLink, ArtistLink, Cover } from '@/tracks/components/details'
+import type { Track } from '@/tracks'
 
-type PlayerProps = { mini?: boolean }
+type PlayerProps = { mini?: boolean; scrubber?: boolean }
 
-export function Player({ mini }: PlayerProps) {
+export function Player({ mini, scrubber }: PlayerProps) {
   const player = usePlayer()
   const meta = normalizeMeta(player.current)
   const isPlayerMaximized = useStore(store, state => state.isPlayerMaximized)
@@ -98,58 +100,94 @@ export function Player({ mini }: PlayerProps) {
         </div>
       </div>
 
-      <div className="flex w-full items-center justify-center gap-3">
-        <Button
-          isIconOnly
-          radius="full"
-          isDisabled={!player.current}
-          variant={player.repeat ? 'flat' : 'light'}
-          color={player.isRepeatCurrent ? 'warning' : 'default'}
-          onPress={() => {
-            if (!player.repeat) player.setRepeat('all')
-            else if (player.isRepeatCurrent) player.setRepeat(null)
-            else player.setRepeat('current')
-          }}>
-          {player.isRepeatCurrent ? <Repeat1Icon className="text-lg" /> : <RepeatIcon className="text-lg" />}
-        </Button>
-
-        <Button isIconOnly radius="full" variant="light" size="lg" onPress={player.prev} isDisabled={!player.hasPrev}>
-          <SkipBackIcon className="text-xl" />
-        </Button>
-
-        <div className="relative">
-          {player.error && (
-            <Tooltip size="sm" radius="sm" className="bg-danger-100" content={player.error?.message}>
-              <div className="absolute inset-0 rounded-full" />
-            </Tooltip>
-          )}
+      {scrubber ? (
+        <div className="flex w-full items-center px-8 gap-3">
+          <PlayButton
+            toggle={player.togglePlay}
+            current={player.current}
+            isPaused={player.isPaused}
+            error={player.error}
+          />
 
           <Button
             isIconOnly
             radius="full"
-            variant="flat"
-            className="size-20"
-            color={player.error ? 'danger' : 'secondary'}
-            isDisabled={!player.current || !!player.error}
-            onPress={player.togglePlay}>
-            {player.isPaused ? <PlayIcon className="text-2xl" /> : <PauseIcon className="text-2xl" />}
+            variant="light"
+            size="lg"
+            onPress={() => {
+              player.seek(0)
+              setProgress(0)
+            }}>
+            <RotateCcwIcon className="text-xl" />
           </Button>
         </div>
+      ) : (
+        <div className="flex w-full items-center justify-center gap-3">
+          <Button
+            isIconOnly
+            radius="full"
+            isDisabled={!player.current}
+            variant={player.repeat ? 'flat' : 'light'}
+            color={player.isRepeatCurrent ? 'warning' : 'default'}
+            onPress={() => {
+              if (!player.repeat) player.setRepeat('all')
+              else if (player.isRepeatCurrent) player.setRepeat(null)
+              else player.setRepeat('current')
+            }}>
+            {player.isRepeatCurrent ? <Repeat1Icon className="text-lg" /> : <RepeatIcon className="text-lg" />}
+          </Button>
 
-        <Button isIconOnly radius="full" variant="light" size="lg" onPress={player.next} isDisabled={!player.hasNext}>
-          <SkipForwardIcon className="text-xl" />
-        </Button>
+          <Button isIconOnly radius="full" variant="light" size="lg" onPress={player.prev} isDisabled={!player.hasPrev}>
+            <SkipBackIcon className="text-xl" />
+          </Button>
 
-        <Button
-          isIconOnly
-          radius="full"
-          isDisabled={!player.current}
-          variant={player.isShuffled ? 'flat' : 'light'}
-          color={player.isShuffled ? 'warning' : 'default'}
-          onPress={player.toggleShuffle}>
-          <ShuffleIcon className="text-lg" />
-        </Button>
-      </div>
+          <PlayButton
+            toggle={player.togglePlay}
+            current={player.current}
+            isPaused={player.isPaused}
+            error={player.error}
+          />
+
+          <Button isIconOnly radius="full" variant="light" size="lg" onPress={player.next} isDisabled={!player.hasNext}>
+            <SkipForwardIcon className="text-xl" />
+          </Button>
+
+          <Button
+            isIconOnly
+            radius="full"
+            isDisabled={!player.current}
+            variant={player.isShuffled ? 'flat' : 'light'}
+            color={player.isShuffled ? 'warning' : 'default'}
+            onPress={player.toggleShuffle}>
+            <ShuffleIcon className="text-lg" />
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+type PlayButtonProps = { isPaused: boolean; error?: Error | null; current?: Track | null; toggle: () => void }
+
+function PlayButton({ current, error, isPaused, toggle }: PlayButtonProps) {
+  return (
+    <div className="relative">
+      {error && (
+        <Tooltip size="sm" radius="sm" className="bg-danger-100" content={error.message}>
+          <div className="absolute inset-0 rounded-full" />
+        </Tooltip>
+      )}
+
+      <Button
+        isIconOnly
+        radius="full"
+        variant="flat"
+        className="size-20"
+        color={error ? 'danger' : 'secondary'}
+        isDisabled={!current || !!error}
+        onPress={toggle}>
+        {isPaused ? <PlayIcon className="text-2xl" /> : <PauseIcon className="text-2xl" />}
+      </Button>
     </div>
   )
 }

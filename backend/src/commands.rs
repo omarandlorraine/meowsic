@@ -1,5 +1,5 @@
 use crate::db::{Emotion, GetTracksFilters};
-use crate::tracks::{Album, Track, find_artist_image};
+use crate::tracks::{Album, Lyrics, Track, find_artist_image};
 use crate::{AppState, Error};
 use std::path::PathBuf;
 use tauri::State;
@@ -80,6 +80,16 @@ pub async fn db_get_tracks(
     filters: GetTracksFilters,
 ) -> Result<Vec<Track>, Error> {
     let res = state.db.get_tracks(&filters).await?;
+
+    Ok(res)
+}
+
+#[tauri::command]
+pub async fn db_get_track(
+    state: State<AppState, '_>,
+    hash: String,
+) -> Result<Option<Track>, Error> {
+    let res = state.db.get_track(&hash).await?;
 
     Ok(res)
 }
@@ -210,6 +220,27 @@ pub async fn db_get_artists(state: State<AppState, '_>) -> Result<Vec<String>, E
 }
 
 #[tauri::command]
+pub async fn db_get_lyrics(
+    state: State<AppState, '_>,
+    hash: String,
+) -> Result<Option<Lyrics>, Error> {
+    let res = state.db.get_lyrics(&hash).await?;
+
+    Ok(res)
+}
+
+#[tauri::command]
+pub async fn db_set_lyrics(
+    state: State<AppState, '_>,
+    hash: String,
+    lyrics: Option<Lyrics>,
+) -> Result<(), Error> {
+    state.db.set_lyrics(&hash, lyrics.as_ref()).await?;
+
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn db_scan_dirs(state: State<AppState, '_>) -> Result<String, Error> {
     let dirs = state.db.get_dirs().await?;
     let res = state.db.scan_dirs(&dirs).await?;
@@ -229,6 +260,27 @@ pub async fn db_get_dirs(state: State<AppState, '_>) -> Result<Vec<String>, Erro
     let res = state.db.get_dirs().await?;
 
     Ok(res)
+}
+
+#[tauri::command]
+pub async fn db_backup(state: State<AppState, '_>, dir: PathBuf) -> Result<PathBuf, Error> {
+    let res = state.db.backup(&dir).await?;
+
+    Ok(res)
+}
+
+#[tauri::command]
+pub async fn db_restore(state: State<AppState, '_>, path: PathBuf) -> Result<(), Error> {
+    state.db.restore(&path).await?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn db_reset(state: State<AppState, '_>) -> Result<(), Error> {
+    state.db.reset().await?;
+
+    Ok(())
 }
 
 #[tauri::command]
