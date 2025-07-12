@@ -75,6 +75,51 @@ pub fn player_get_arbitrary_tracks(state: State<AppState, '_>) -> Result<Vec<Tra
 }
 
 #[tauri::command]
+pub fn scrub_player_start(state: State<AppState, '_>) -> Result<(), Error> {
+    state.scrub_player.lock().start()?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn scrub_player_set_current(
+    state: State<AppState, '_>,
+    path: Option<PathBuf>,
+) -> Result<(), Error> {
+    state.scrub_player.lock().set_current(path);
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn scrub_player_seek(state: State<AppState, '_>, elapsed: u64) -> Result<(), Error> {
+    state.scrub_player.lock().seek(elapsed)?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn scrub_player_stop(state: State<AppState, '_>) -> Result<(), Error> {
+    state.scrub_player.lock().stop();
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn scrub_player_play(state: State<AppState, '_>) -> Result<(), Error> {
+    state.scrub_player.lock().play();
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn scrub_player_pause(state: State<AppState, '_>) -> Result<(), Error> {
+    state.scrub_player.lock().pause();
+
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn db_get_tracks(
     state: State<AppState, '_>,
     filters: GetTracksFilters,

@@ -2,18 +2,12 @@ import { createStore, useStore } from 'zustand'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { addToast } from '@heroui/react'
-import { BackendPlayer, WebPlayer } from '@/player/types'
-import {
-  getNextIndex,
-  getPrevIndex,
-  invalidateInterval,
-  isEmotionRankingAllowed,
-  isRepeatCurrent,
-  selectPlayer,
-} from '@/player/utils'
+import { invalidateInterval } from '@/utils'
 import { rankUp } from '@/emotions'
 import { setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
+import { BackendPlayer, WebPlayer } from '@/player/types'
 import type { ShortcutHandler } from '@tauri-apps/plugin-global-shortcut'
+import type { Timeout } from '@/utils'
 import type { Track } from '@/tracks'
 import type { Player } from '@/player/types'
 
@@ -46,7 +40,7 @@ export async function goto(index: number, using?: Player) {
   if (!state.isPaused) invalidateInterval(state.interval)
 
   const track = state.queue[index]
-  const player = using ?? selectPlayer(track, [backendPlayer, webPlayer])
+  const player = using ?? backendPlayer // selectPlayer(track, [backendPlayer, webPlayer])
 
   // case: stop the previous player
   if (player !== state.player) state.player.stop()
@@ -295,6 +289,28 @@ export async function init() {
   await playArbitraryTracks(tracks)
 }
 
+type GetIndexParams = Pick<Store, 'queue' | 'current' | 'repeat'>
+
+export function getNextIndex({ queue, current, repeat }: GetIndexParams) {
+  if (isRepeatCurrent(repeat)) return current
+  if (queue.length > current + 1) return current + 1
+  return repeat ? 0 : -1
+}
+
+export function getPrevIndex({ queue, current, repeat }: GetIndexParams) {
+  if (isRepeatCurrent(repeat)) return current
+  if (current > 0) return current - 1
+  return repeat ? queue.length - 1 : -1
+}
+
+export function isRepeatCurrent(repeat: Repeat | null) {
+  return repeat?.[0] === 'c'
+}
+
+export function isEmotionRankingAllowed(template?: Template | null) {
+  return !template // || (template[0] !== 'e' && template[0] !== 'a')
+}
+
 export const onGlobalShortcut: ShortcutHandler = evt => {
   if (evt.state === 'Released') return
   const state = store.getState()
@@ -313,8 +329,6 @@ export const onGlobalShortcut: ShortcutHandler = evt => {
       return reset()
   }
 }
-
-export type Timeout = ReturnType<typeof setInterval>
 
 export type Template = 'emotions' | 'arbitrary'
 
@@ -335,5 +349,3 @@ export type Store = {
   error?: Error | null
   player: Player
 }
-
-export type GetIndexParams = Pick<Store, 'queue' | 'current' | 'repeat'>

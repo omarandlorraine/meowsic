@@ -3,14 +3,14 @@
 
 mod commands;
 mod db;
-mod player;
+mod players;
 mod tracks;
 mod utils;
 
 use anyhow::Result;
 use db::Db;
 use parking_lot::Mutex;
-use player::Player;
+use players::{Player, ScrubPlayer};
 use rodio::{OutputStream, Sink};
 use serde::Serialize;
 use std::sync::Arc;
@@ -21,9 +21,15 @@ use tracks::Track;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let (_stream, handle) = OutputStream::try_default()?; // ! DO NOT DROP _stream (don't assign to just '_')
+    // ! DO NOT DROP _stream (don't assign to just '_')
+    let (_stream, handle) = OutputStream::try_default()?;
     let sink = Sink::try_new(&handle)?;
     let player = Arc::new(Mutex::new(Player::new(sink)?));
+
+    // ! DO NOT DROP _stream (don't assign to just '_')
+    let (_stream, handle) = OutputStream::try_default()?;
+    let sink = Sink::try_new(&handle)?;
+    let scrub_player = Arc::new(Mutex::new(ScrubPlayer::new(sink)?));
 
     let mut builder = Builder::default();
 
@@ -81,6 +87,7 @@ async fn main() -> Result<()> {
             app.manage(AppState {
                 http_client,
                 player,
+                scrub_player,
                 db,
             });
 
@@ -97,6 +104,12 @@ async fn main() -> Result<()> {
             commands::player_is_paused,
             commands::player_set_volume,
             commands::player_get_arbitrary_tracks,
+            commands::scrub_player_start,
+            commands::scrub_player_set_current,
+            commands::scrub_player_seek,
+            commands::scrub_player_stop,
+            commands::scrub_player_play,
+            commands::scrub_player_pause,
             commands::db_get_tracks,
             commands::db_get_track,
             commands::db_get_playlists,
@@ -130,6 +143,7 @@ async fn main() -> Result<()> {
 struct AppState {
     http_client: HttpClient,
     player: Arc<Mutex<Player>>,
+    scrub_player: Arc<Mutex<ScrubPlayer>>,
     db: Db,
 }
 

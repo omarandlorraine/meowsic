@@ -1,14 +1,12 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router'
+import { useQuery } from '@tanstack/react-query'
+import { Button, Image, cn } from '@heroui/react'
 import { useStore } from 'zustand'
-import { Button, cn, Image, Slider, Tooltip } from '@heroui/react'
 import {
-  PauseIcon,
   PictureInPicture2Icon,
-  PlayIcon,
   Repeat1Icon,
   RepeatIcon,
-  RotateCcwIcon,
   ShuffleIcon,
   SkipBackIcon,
   SkipForwardIcon,
@@ -17,29 +15,26 @@ import {
 } from 'lucide-react'
 import { formatTime, getAssetUrl } from '@/utils'
 import { store, setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
+import { PlayButton, SeekBar } from '@/players'
 import { usePlayer } from '@/player'
+import { getLyrics, PlainLyricsView, SyncedLyricsView } from '@/lyrics'
 import { normalizeMeta } from '@/tracks'
 import { AlbumLink, ArtistLink, Cover } from '@/tracks/components/details'
-import type { Track } from '@/tracks'
 
-type PlayerProps = { mini?: boolean; scrubber?: boolean }
+type PlayerProps = { mini?: boolean }
 
-export function Player({ mini, scrubber }: PlayerProps) {
+export function Player({ mini }: PlayerProps) {
   const player = usePlayer()
   const meta = normalizeMeta(player.current)
   const isPlayerMaximized = useStore(store, state => state.isPlayerMaximized)
 
-  const [progress, setProgress] = useState(player.elapsed)
-  const [isSeeking, setIsSeeking] = useState(false)
-  const prevElapsed = useRef(player.elapsed)
+  const queryLyrics = useQuery({
+    queryKey: ['lyrics', player.current?.hash],
+    queryFn: async () => await getLyrics(player.current!),
+    enabled: !!player.current,
+  })
 
-  useLayoutEffect(() => {
-    if (!isSeeking && player.elapsed !== prevElapsed.current) {
-      setProgress(player.elapsed)
-    }
-
-    prevElapsed.current = player.elapsed
-  }, [player.elapsed, isSeeking])
+  const [showLyrics, setShowLyrics] = useState(false)
 
   return (
     <div className={cn('flex flex-col items-center justify-center h-full isolate', mini && 'pb-6 pt-3')}>
@@ -62,36 +57,46 @@ export function Player({ mini, scrubber }: PlayerProps) {
         </div>
       ) : (
         <>
-          <Cover url={player.current?.cover} className="size-80 mb-18" />
+          {!showLyrics || !queryLyrics.data ? (
+            <Cover url={player.current?.cover} className="size-80" />
+          ) : !queryLyrics.data.synced ? (
+            <PlainLyricsView data={queryLyrics.data.plain} className="size-full" />
+          ) : (
+            <SyncedLyricsView
+              data={queryLyrics.data.synced}
+              elapsed={player.elapsed}
+              duration={player.current?.duration}
+              onSeek={player.seek}
+              className="h-80"
+            />
+          )}
 
-          <div className="flex items-center gap-2 w-4/5 p-3">
+          <div className="flex items-center gap-2 w-4/5 p-3 mt-16">
             {meta.title && <div className="text-large mr-auto">{meta.title}</div>}
 
             {meta.album && <AlbumLink>{meta.album}</AlbumLink>}
             {meta.artist && <ArtistLink>{meta.artist}</ArtistLink>}
+
+            {queryLyrics.data && (
+              <Button
+                size="sm"
+                radius="sm"
+                variant="flat"
+                className="tracking-wider h-6"
+                onPress={() => setShowLyrics(!showLyrics)}>
+                {showLyrics ? 'HIDE' : 'SHOW'} LYRICS
+              </Button>
+            )}
           </div>
         </>
       )}
 
       <div className={cn('flex flex-col mx-auto gap-3', mini ? 'w-full p-8' : 'w-4/5 p-3')}>
-        <Slider
-          size="sm"
-          color="foreground"
-          aria-label="Progress"
-          value={progress}
-          maxValue={player.current?.duration ?? -1}
-          onChange={value => {
-            setIsSeeking(true)
-            setProgress(typeof value === 'number' ? value : value[0])
-          }}
+        <SeekBar
+          onSeek={player.seek}
+          elapsed={player.elapsed}
+          duration={player.current?.duration}
           isDisabled={!player.current || !!player.error}
-          onChangeEnd={value => {
-            setIsSeeking(false)
-            const pos = typeof value === 'number' ? value : value[0]
-
-            player.seek(pos)
-            setProgress(pos)
-          }}
         />
 
         <div className="flex justify-between">
@@ -100,94 +105,46 @@ export function Player({ mini, scrubber }: PlayerProps) {
         </div>
       </div>
 
-      {scrubber ? (
-        <div className="flex w-full items-center px-8 gap-3">
-          <PlayButton
-            toggle={player.togglePlay}
-            current={player.current}
-            isPaused={player.isPaused}
-            error={player.error}
-          />
+      <div className="flex w-full items-center justify-center gap-3">
+        <Button
+          isIconOnly
+          radius="full"
+          isDisabled={!player.current}
+          variant={player.repeat ? 'flat' : 'light'}
+          color={player.isRepeatCurrent ? 'warning' : 'default'}
+          onPress={() => {
+            if (!player.repeat) player.setRepeat('all')
+            else if (player.isRepeatCurrent) player.setRepeat(null)
+            else player.setRepeat('current')
+          }}>
+          {player.isRepeatCurrent ? <Repeat1Icon className="text-lg" /> : <RepeatIcon className="text-lg" />}
+        </Button>
 
-          <Button
-            isIconOnly
-            radius="full"
-            variant="light"
-            size="lg"
-            onPress={() => {
-              player.seek(0)
-              setProgress(0)
-            }}>
-            <RotateCcwIcon className="text-xl" />
-          </Button>
-        </div>
-      ) : (
-        <div className="flex w-full items-center justify-center gap-3">
-          <Button
-            isIconOnly
-            radius="full"
-            isDisabled={!player.current}
-            variant={player.repeat ? 'flat' : 'light'}
-            color={player.isRepeatCurrent ? 'warning' : 'default'}
-            onPress={() => {
-              if (!player.repeat) player.setRepeat('all')
-              else if (player.isRepeatCurrent) player.setRepeat(null)
-              else player.setRepeat('current')
-            }}>
-            {player.isRepeatCurrent ? <Repeat1Icon className="text-lg" /> : <RepeatIcon className="text-lg" />}
-          </Button>
+        <Button isIconOnly radius="full" variant="light" size="lg" onPress={player.prev} isDisabled={!player.hasPrev}>
+          <SkipBackIcon className="text-xl" />
+        </Button>
 
-          <Button isIconOnly radius="full" variant="light" size="lg" onPress={player.prev} isDisabled={!player.hasPrev}>
-            <SkipBackIcon className="text-xl" />
-          </Button>
+        <PlayButton
+          toggle={player.togglePlay}
+          current={player.current}
+          isPaused={player.isPaused}
+          error={player.error}
+        />
 
-          <PlayButton
-            toggle={player.togglePlay}
-            current={player.current}
-            isPaused={player.isPaused}
-            error={player.error}
-          />
+        <Button isIconOnly radius="full" variant="light" size="lg" onPress={player.next} isDisabled={!player.hasNext}>
+          <SkipForwardIcon className="text-xl" />
+        </Button>
 
-          <Button isIconOnly radius="full" variant="light" size="lg" onPress={player.next} isDisabled={!player.hasNext}>
-            <SkipForwardIcon className="text-xl" />
-          </Button>
-
-          <Button
-            isIconOnly
-            radius="full"
-            isDisabled={!player.current}
-            variant={player.isShuffled ? 'flat' : 'light'}
-            color={player.isShuffled ? 'warning' : 'default'}
-            onPress={player.toggleShuffle}>
-            <ShuffleIcon className="text-lg" />
-          </Button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-type PlayButtonProps = { isPaused: boolean; error?: Error | null; current?: Track | null; toggle: () => void }
-
-function PlayButton({ current, error, isPaused, toggle }: PlayButtonProps) {
-  return (
-    <div className="relative">
-      {error && (
-        <Tooltip size="sm" radius="sm" className="bg-danger-100" content={error.message}>
-          <div className="absolute inset-0 rounded-full" />
-        </Tooltip>
-      )}
-
-      <Button
-        isIconOnly
-        radius="full"
-        variant="flat"
-        className="size-20"
-        color={error ? 'danger' : 'secondary'}
-        isDisabled={!current || !!error}
-        onPress={toggle}>
-        {isPaused ? <PlayIcon className="text-2xl" /> : <PauseIcon className="text-2xl" />}
-      </Button>
+        <Button
+          isIconOnly
+          radius="full"
+          isDisabled={!player.current}
+          variant={player.isShuffled ? 'flat' : 'light'}
+          color={player.isShuffled ? 'warning' : 'default'}
+          onPress={player.toggleShuffle}>
+          <ShuffleIcon className="text-lg" />
+        </Button>
+      </div>
     </div>
   )
 }

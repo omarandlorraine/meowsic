@@ -1,12 +1,15 @@
 import { invoke } from '@tauri-apps/api/core'
-import { getAssetUrl } from '@/utils'
+import { MediaPlayer } from '@/players'
 import type { Track } from '@/tracks'
 
 export class BackendPlayer implements Player {
-  associated = ['mp3', 'm4a', 'flac', 'wav', 'ogg', 'aac', 'opus', 'aiff']
-
   async goto(index: number) {
     await invoke('player_goto', { index })
+  }
+
+  async stop() {
+    await invoke('player_stop')
+    await this.pause()
   }
 
   async seek(elapsed: number) {
@@ -19,11 +22,6 @@ export class BackendPlayer implements Player {
 
   async play() {
     await invoke('player_play')
-  }
-
-  async stop() {
-    await invoke('player_stop')
-    await this.pause()
   }
 
   async setQueue(queue: Track[]) {
@@ -40,36 +38,30 @@ export class BackendPlayer implements Player {
 }
 
 export class WebPlayer implements Player {
-  associated = []
-
-  player = new Audio()
-  error: Error | null = null
-
+  player: MediaPlayer
   queue: string[] = []
   current = 0
 
   constructor() {
-    this.player.addEventListener('error', () => {
-      this.error = normalizeMediaError(this.player.error)
-    })
+    this.player = new MediaPlayer(new Audio())
 
     // DEBUG - show controls
     // this.player.controls = true
     // document.body.appendChild(this.player)
   }
 
-  load(src: string | null) {
-    this.player.src = src ? getAssetUrl(src) : ''
-    this.player.load()
-  }
-
   async goto(index: number) {
     this.current = index
-    this.load(this.queue[index])
+    this.player.load(this.queue[index])
+  }
+
+  async stop() {
+    this.player.load(null)
+    await this.pause()
   }
 
   async seek(elapsed: number) {
-    this.player.currentTime = elapsed
+    this.player.seek(elapsed)
   }
 
   async pause() {
@@ -78,11 +70,6 @@ export class WebPlayer implements Player {
 
   async play() {
     await this.player.play()
-  }
-
-  async stop() {
-    this.load(null)
-    await this.pause()
   }
 
   async setQueue(queue: Track[]) {
@@ -94,38 +81,15 @@ export class WebPlayer implements Player {
   }
 
   async setVolume(volume: number) {
-    this.player.volume = volume
+    this.player.setVolume(volume)
   }
 
   async getDuration() {
-    return new Promise<number>((resolve, reject) => {
-      const resolveData = () => resolve(Math.round(this.player.duration))
-      if (!isNaN(this.player.duration)) return resolveData()
-
-      this.player.addEventListener('loadedmetadata', resolveData, { once: true })
-      this.player.addEventListener('error', () => reject(normalizeMediaError(this.player.error)), { once: true })
-    })
-  }
-}
-
-function normalizeMediaError(error: MediaError | null) {
-  switch (error?.code) {
-    case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-      return new Error('Media source not supported or found')
-    case MediaError.MEDIA_ERR_ABORTED:
-      return new Error('Playback aborted')
-    case MediaError.MEDIA_ERR_NETWORK:
-      return new Error('Network error')
-    case MediaError.MEDIA_ERR_DECODE:
-      return new Error('Decoding error')
-    default:
-      return new Error('Unknown error')
+    return await this.player.getDuration()
   }
 }
 
 export type Player = {
-  associated: string[]
-
   goto(index: number): Promise<void>
   seek(elapsed: number): Promise<void>
   pause(): Promise<void>

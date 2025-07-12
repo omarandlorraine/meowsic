@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, matchRoutes, Outlet, useLocation, useNavigate } from 'react-router'
+import { useEffect, useRef, useState } from 'react'
+import { Link, matchPath, Outlet, useLocation, useNavigate } from 'react-router'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { Button, cn, Popover, PopoverContent, PopoverTrigger, Slider } from '@heroui/react'
 import { useStore } from 'zustand'
@@ -25,6 +25,8 @@ import {
 import { useHotkeys } from 'react-hotkeys-hook'
 import { store, setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
 import { TrackDetailsModal } from '@/tracks/components/details'
+import { usePlayer } from '@/player'
+import { useScrubPlayer } from '@/scrub-player'
 import { MiniPlayer } from '@/player/components'
 import { EmotionSelect } from '@/emotions/components'
 import type { LucideIcon } from 'lucide-react'
@@ -32,13 +34,16 @@ import type { LucideIcon } from 'lucide-react'
 export function Window() {
   const navigate = useNavigate()
   const location = useLocation()
+  const prevLocation = useRef(location)
+  const player = usePlayer()
+  const scrubPlayer = useScrubPlayer()
 
   const { isPlayerMaximized, isMiniPlayerVisible, volume: globalVolume } = useStore(store)
   const [volume, setVolume] = useState(globalVolume * 100)
 
   const isHome = location.pathname === '/'
   const showBars = !isPlayerMaximized || !isHome
-  const showMiniPlayer = isMiniPlayerVisible && !isHome && !matchRoutes([{ path: '/tracks/:hash' }], location.pathname)
+  const showMiniPlayer = isMiniPlayerVisible && !isHome && !matchPath('/tracks/:hash', location.pathname)
 
   useHotkeys(
     ['f', 'b', 'ctrl+h'],
@@ -55,6 +60,13 @@ export function Window() {
     },
     [isPlayerMaximized, isMiniPlayerVisible],
   )
+
+  useEffect(() => {
+    if (matchPath('/tracks/:hash', location.pathname) && player.current && !player.isPaused) player.pause()
+    else if (matchPath('/tracks/:hash', prevLocation.current.pathname)) scrubPlayer.reset()
+
+    prevLocation.current = location
+  }, [location])
 
   return (
     <>

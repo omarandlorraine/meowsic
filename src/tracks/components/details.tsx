@@ -1,16 +1,49 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { invoke } from '@tauri-apps/api/core'
 import { createStore, useStore } from 'zustand'
-import { Modal, ModalContent, ModalHeader, ModalBody, cn, Image, ModalFooter, Button } from '@heroui/react'
-import { CalendarIcon, ClockIcon, Disc3Icon, MusicIcon, TagIcon, UserRoundIcon } from 'lucide-react'
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  cn,
+  Image,
+  ModalFooter,
+  Button,
+  Tab,
+  Tabs,
+  ScrollShadow,
+  addToast,
+  useDisclosure,
+} from '@heroui/react'
+import {
+  CalendarIcon,
+  ClockIcon,
+  Disc3Icon,
+  HeartIcon,
+  MusicIcon,
+  PencilLineIcon,
+  SearchIcon,
+  TagIcon,
+  UserRoundIcon,
+} from 'lucide-react'
 import { getAssetUrl } from '@/utils'
 import { normalizeMeta } from '@/tracks'
-import { usePlayer } from '@/player'
-import { Player } from '@/player/components'
+import {
+  PlainLyricsView,
+  SyncedLyricsView,
+  LyricsEditorModal,
+  getLyrics,
+  setLyrics,
+  searchExternalLyrics,
+} from '@/lyrics'
+import { useScrubPlayer } from '@/scrub-player'
+import { ScrubPlayer } from '@/scrub-player/components'
 import type { LucideIcon } from 'lucide-react'
 import type { Track } from '@/tracks'
+import type { Lyrics } from '@/lyrics'
 
 export function TrackDetailsModal() {
   const { data, hide } = useTrackDetails()
@@ -49,13 +82,7 @@ export function TrackDetailsModal() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 py-3">
-            <Pair label="File Name" value={data?.name} />
-            <Pair label="File Path" value={data?.path} />
-            <Pair label="Hash" value={data?.hash} />
-            <Pair label="Extension" value={data?.extension} />
-            {data?.rank && <Pair label="Emotion Rank" value={data.rank} />}
-          </div>
+          <MoreDetails data={data} className="py-3" />
         </ModalBody>
 
         <ModalFooter>
@@ -66,6 +93,10 @@ export function TrackDetailsModal() {
       </ModalContent>
     </Modal>
   )
+}
+
+async function getTrack(hash: string) {
+  return await invoke<Track | null>('db_get_track', { hash })
 }
 
 type CoverProps = {
@@ -138,13 +169,27 @@ export function ArtistLink({ children, ...props }: PropertyTextProps) {
   )
 }
 
+type MoreDetailsProps = { data: Track | null; className?: string }
+
+export function MoreDetails({ data, className }: MoreDetailsProps) {
+  return (
+    <div className={cn('flex flex-col gap-2', className)}>
+      <Pair label="File Name" value={data?.name} />
+      <Pair label="File Path" value={data?.path} />
+      <Pair label="Hash" value={data?.hash} />
+      <Pair label="Extension" value={data?.extension} />
+      {data?.rank && <Pair label="Emotion Rank" value={data.rank} />}
+    </div>
+  )
+}
+
 type PairProps = { label: string; value?: string | number | null }
 
 function Pair({ label, value }: PairProps) {
   return (
     <div className="flex items-center text-default-500 text-tiny">
       <div className="w-36 shrink-0">{label}</div>
-      <div>{value ?? '-'}</div>
+      <div className="break-all">{value ?? '-'}</div>
     </div>
   )
 }
@@ -163,7 +208,10 @@ export function useTrackDetails() {
 
 export function TrackScreen() {
   const params = useParams<{ hash: string }>()
-  const player = usePlayer()
+  const player = useScrubPlayer()
+  const [tab, setTab] = useState('lyrics')
+  const [selectedLyrics, setSelectedLyrics] = useState<Lyrics | null>(null)
+  const enterLyricsModal = useDisclosure()
 
   const query = useQuery({
     queryKey: ['track', params.hash],
@@ -175,27 +223,136 @@ export function TrackScreen() {
     ;(async () => {
       if (!query.data) return
 
-      const queue = [query.data]
-      await player.setQueue(queue)
-
-      player.setState({ queue, repeat: 'current' })
-      await player.goto(0)
+      await player.setCurrent(query.data)
+      await player.start(query.data)
+      await player.pause()
     })()
   }, [query.data])
+
+  const queryExternalLyrics = useQuery({
+    queryKey: ['search-external-lyrics', player.current?.hash],
+    queryFn: async () => await searchExternalLyrics(player.current!),
+    enabled: false,
+  })
+
+  const queryLyrics = useQuery({
+    queryKey: ['lyrics', player.current?.hash],
+    queryFn: async () => await getLyrics(player.current!),
+    enabled: !!player.current,
+  })
+
+  const mutationSaveLyrics = useMutation({
+    mutationFn: async (lyrics: Lyrics) => {
+      if (!player.current) return
+      await setLyrics(player.current, lyrics)
+    },
+    onSuccess: async () => {
+      const res = await queryLyrics.refetch()
+      if (res.isSuccess) setSelectedLyrics(res.data)
+      addToast({ color: 'success', title: 'Lyrics Saved' })
+    },
+  })
 
   return (
     <div className="pt-[calc(theme(spacing.10))] overflow-auto size-full flex flex-col">
       {query.isSuccess && query.data && (
-        <div className="p-3 flex flex-col gap-3">
-          <div className="w-1/2 mx-auto">
-            <Player mini scrubber />
+        <div className="py-3 px-6 flex flex-col gap-6 h-full overflow-auto">
+          <div className="w-full rounded-small pt-3 bg-default-50/25 shrink-0">
+            <div className="w-4/5 mx-auto">
+              <ScrubPlayer />
+            </div>
           </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <Tabs variant="underlined" selectedKey={tab} onSelectionChange={key => setTab(key as string)}>
+              <Tab key="lyrics" title="Lyrics" />
+              <Tab key="rules" title="Rules" />
+              <Tab key="more" title="More Details" />
+            </Tabs>
+
+            <div className="h-5 border-r border-default/30 mr-3" />
+
+            {tab[0] === 'l' && (
+              <>
+                {queryExternalLyrics.isSuccess && queryExternalLyrics.data.length > 0 && (
+                  <Button
+                    size="sm"
+                    radius="sm"
+                    variant="flat"
+                    isDisabled={!selectedLyrics || selectedLyrics === queryLyrics.data}
+                    onPress={() => mutationSaveLyrics.mutate(selectedLyrics!)}>
+                    <HeartIcon className="text-medium" /> Save Selected Lyrics
+                  </Button>
+                )}
+
+                <Button
+                  size="sm"
+                  radius="sm"
+                  variant="flat"
+                  isLoading={queryExternalLyrics.isFetching}
+                  onPress={() => queryExternalLyrics.refetch()}>
+                  <SearchIcon className="text-medium" /> Search Online
+                </Button>
+
+                <Button size="sm" radius="sm" variant="flat" onPress={enterLyricsModal.onOpen}>
+                  <PencilLineIcon className="text-medium" /> Enter Lyrics
+                </Button>
+
+                <LyricsEditorModal
+                  disclosure={enterLyricsModal}
+                  onSave={(value, isSynced) => {
+                    mutationSaveLyrics.mutate(isSynced ? { synced: value, plain: '' } : { synced: '', plain: value })
+                  }}
+                />
+              </>
+            )}
+          </div>
+
+          {tab[0] === 'l' && (
+            <div className="flex gap-3 h-full overflow-auto">
+              <ScrollShadow className="flex flex-col gap-1 shrink-0 pr-3">
+                <Button
+                  size="sm"
+                  radius="sm"
+                  isDisabled={!queryLyrics.data}
+                  className="text-small justify-start shrink-0"
+                  onPress={() => setSelectedLyrics(queryLyrics.data!)}
+                  variant={selectedLyrics === queryLyrics.data ? 'flat' : 'light'}>
+                  Currently Saved
+                </Button>
+
+                {queryExternalLyrics.isSuccess &&
+                  queryExternalLyrics.data.map((item, index) => (
+                    <Button
+                      size="sm"
+                      radius="sm"
+                      key={index + 1}
+                      className="text-small justify-start shrink-0"
+                      onPress={() => setSelectedLyrics(item)}
+                      variant={selectedLyrics === item ? 'flat' : 'light'}>
+                      Online {index + 1}
+                    </Button>
+                  ))}
+              </ScrollShadow>
+
+              {selectedLyrics &&
+                (!selectedLyrics.synced ? (
+                  <PlainLyricsView data={selectedLyrics.plain} className="size-full" />
+                ) : (
+                  <SyncedLyricsView
+                    data={selectedLyrics.synced}
+                    elapsed={player.elapsed}
+                    duration={player.current?.duration}
+                    onSeek={player.seek}
+                    className="size-full"
+                  />
+                ))}
+            </div>
+          )}
+
+          {tab[0] === 'm' && <MoreDetails data={player.current} />}
         </div>
       )}
     </div>
   )
-}
-
-async function getTrack(hash: string) {
-  return await invoke<Track | null>('db_get_track', { hash })
 }
