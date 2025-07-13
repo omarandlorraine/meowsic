@@ -29,7 +29,7 @@ export type ExternalLyrics = {
   syncedLyrics?: string
 }
 
-export type Lyrics = { plain: string; synced: string }
+export type Lyrics = { id?: string | number; plain: string; synced: string }
 
 export async function searchExternalLyrics(track: Track) {
   const res = await fetch(
@@ -37,7 +37,8 @@ export async function searchExternalLyrics(track: Track) {
   )
   const data = (await res.json()) as ExternalLyrics[]
 
-  return data.map<Lyrics>(it => ({ plain: it.plainLyrics, synced: it.syncedLyrics ?? '' }))
+  // NOTE: used index because id is big and querySelector might struggle ?
+  return data.map<Lyrics>((it, index) => ({ id: index, plain: it.plainLyrics, synced: it.syncedLyrics ?? '' }))
 }
 
 export async function getLyrics(track: Track) {
@@ -49,6 +50,7 @@ export async function setLyrics(track: Track, lyrics: Lyrics) {
 }
 
 type SyncedLyricsViewProps = {
+  id?: string | number
   data: string
   elapsed: number
   duration?: number
@@ -60,8 +62,9 @@ export function SyncedLyricsView({
   data,
   elapsed,
   onSeek,
-  duration = Number.MAX_SAFE_INTEGER,
   className,
+  id = 's',
+  duration = Number.MAX_SAFE_INTEGER,
 }: SyncedLyricsViewProps) {
   const lines = data.split('\n').map(parseLine)
 
@@ -86,16 +89,16 @@ export function SyncedLyricsView({
     if (!ref.current) return
 
     ref.current
-      .querySelector<HTMLElement>(`#lyrics-${lines[currentIndex]?.time}`)
+      .querySelector<HTMLElement>(`#lrc-${id}-${lines[currentIndex]?.time}-${currentIndex}`)
       ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [currentIndex])
 
   return (
     <ScrollShadow ref={ref} hideScrollBar className={className}>
-      <div className="flex flex-col gap-2 text-center items-center p-3">
+      <div className="flex flex-col gap-3 text-center items-center text-large p-3">
         {lines.map((line, index) => {
           if (!line) return null
-          let key = `lyrics-${line.time}`
+          let key = `lrc-${id}-${line.time}-${index}`
 
           return (
             <button
@@ -104,8 +107,8 @@ export function SyncedLyricsView({
               type="button"
               onClick={() => onSeek?.(line.time)}
               className={cn(
-                'text-default-300',
-                index === currentIndex && 'text-warning-600',
+                'transition-colors duration-300 text-default-300',
+                index === currentIndex && 'text-foreground',
                 onSeek && 'cursor-pointer',
               )}>
               {line.text || '. . .'}

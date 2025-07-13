@@ -286,16 +286,6 @@ pub async fn db_set_lyrics(
 }
 
 #[tauri::command]
-pub async fn db_get_rules(
-    state: State<AppState, '_>,
-    hash: String,
-) -> Result<Option<String>, Error> {
-    let res = state.db.get_rules(&hash).await?;
-
-    Ok(res)
-}
-
-#[tauri::command]
 pub async fn db_set_rules(
     state: State<AppState, '_>,
     hash: String,

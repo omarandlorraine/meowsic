@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { invoke } from '@tauri-apps/api/core'
@@ -24,6 +24,7 @@ import {
   Disc3Icon,
   HeartIcon,
   MusicIcon,
+  PaintbrushVerticalIcon,
   PencilLineIcon,
   SearchIcon,
   TagIcon,
@@ -41,11 +42,10 @@ import {
 } from '@/lyrics'
 import { useScrubPlayer } from '@/scrub-player'
 import { ScrubPlayer } from '@/scrub-player/components'
-import { getRules, RulesEditor, setRules, useExecuteRules } from '@/rules'
+import { RulesEditor, setRules, validateRules, useExecuteRules } from '@/rules'
 import type { LucideIcon } from 'lucide-react'
 import type { Track } from '@/tracks'
 import type { Lyrics } from '@/lyrics'
-import type { RulesEditorHandle } from '@/rules'
 
 export function TrackDetailsModal() {
   const { data, hide } = useTrackDetails()
@@ -213,7 +213,7 @@ export function TrackScreen() {
   const player = useScrubPlayer()
   const [tab, setTab] = useState('lyrics')
   const [selectedLyrics, setSelectedLyrics] = useState<Lyrics | null>(null)
-  const rulesEditor = useRef<RulesEditorHandle>(null)
+  const [ruleValues, setRuleValues] = useState<string[]>([])
   const enterLyricsModal = useDisclosure()
 
   const query = useQuery({
@@ -233,21 +233,21 @@ export function TrackScreen() {
   }, [query.data])
 
   const queryExternalLyrics = useQuery({
-    queryKey: ['search-external-lyrics', player.current?.hash],
-    queryFn: async () => await searchExternalLyrics(player.current!),
+    queryKey: ['search-external-lyrics', query.data?.hash],
+    queryFn: async () => await searchExternalLyrics(query.data!),
     enabled: false,
   })
 
   const queryLyrics = useQuery({
-    queryKey: ['lyrics', player.current?.hash],
-    queryFn: async () => await getLyrics(player.current!),
-    enabled: !!player.current,
+    queryKey: ['lyrics', query.data?.hash],
+    queryFn: async () => await getLyrics(query.data!),
+    enabled: !!query.data,
   })
 
   const mutationSaveLyrics = useMutation({
     mutationFn: async (lyrics: Lyrics) => {
-      if (!player.current) return
-      await setLyrics(player.current, lyrics)
+      if (!query.data) return
+      await setLyrics(query.data, lyrics)
     },
     onSuccess: async () => {
       const res = await queryLyrics.refetch()
@@ -256,25 +256,21 @@ export function TrackScreen() {
     },
   })
 
-  const queryRules = useQuery({
-    queryKey: ['rules', player.current?.hash],
-    queryFn: async () => await getRules(player.current!),
-    enabled: !!player.current,
-  })
-
   const mutationSaveRules = useMutation({
     mutationFn: async (rules: string | null) => {
-      if (!player.current) return
-      await setRules(player.current, rules)
+      if (!query.data) return
+      await setRules(query.data, rules)
     },
     onSuccess: () => {
-      queryRules.refetch()
+      query.refetch()
       addToast({ color: 'success', title: 'Rules Saved' })
     },
   })
 
-  useExecuteRules({
-    data: queryRules.data ?? '',
+  const [isRulesEnabled, setIsRulesEnabled] = useState(true)
+
+  const rulesExecutor = useExecuteRules({
+    enabled: isRulesEnabled,
     track: player.current,
     elapsed: player.elapsed,
     seek: player.seek,
@@ -287,7 +283,14 @@ export function TrackScreen() {
         <div className="pt-3 flex flex-col gap-6 h-full overflow-auto">
           <div className="w-full rounded-small pt-3 bg-default-50/25 shrink-0 px-6">
             <div className="w-4/5 mx-auto">
-              <ScrubPlayer />
+              <ScrubPlayer
+                isRulesEnabled={isRulesEnabled}
+                onToggleRules={setIsRulesEnabled}
+                onReplay={() => {
+                  rulesExecutor.reset()
+                  player.seek(0)
+                }}
+              />
             </div>
           </div>
 
@@ -340,14 +343,16 @@ export function TrackScreen() {
                 size="sm"
                 radius="sm"
                 variant="flat"
-                onPress={() => mutationSaveRules.mutate(rulesEditor.current?.value ?? null)}>
-                <HeartIcon className="text-medium" /> Save Rules
+                isLoading={mutationSaveRules.isPending}
+                isDisabled={!query.data || ruleValues.join('\n') === query.data.rules}
+                onPress={() => mutationSaveRules.mutate(validateRules(ruleValues, query.data!))}>
+                <PaintbrushVerticalIcon className="text-medium" /> Apply Rules
               </Button>
             )}
           </div>
 
           {tab[0] === 'l' && (
-            <div className="flex gap-3 h-full overflow-auto px-6">
+            <div className="flex gap-3 h-full overflow-auto pl-6 pr-40">
               <ScrollShadow className="flex flex-col gap-1 shrink-0 pr-3 pb-3">
                 <Button
                   size="sm"
@@ -378,9 +383,10 @@ export function TrackScreen() {
                   <PlainLyricsView data={selectedLyrics.plain} className="size-full" />
                 ) : (
                   <SyncedLyricsView
+                    id={selectedLyrics.id}
                     data={selectedLyrics.synced}
+                    duration={query.data?.duration}
                     elapsed={player.elapsed}
-                    duration={player.current?.duration}
                     onSeek={player.seek}
                     className="size-full"
                   />
@@ -388,13 +394,13 @@ export function TrackScreen() {
             </div>
           )}
 
-          {tab[0] === 'r' && player.current && (
+          {tab[0] === 'r' && query.data && (
             <div className="h-full overflow-auto px-6 pb-3">
-              <RulesEditor data={queryRules.data ?? ''} track={player.current} ref={rulesEditor} />
+              <RulesEditor track={query.data} values={ruleValues} setValues={setRuleValues} />
             </div>
           )}
 
-          {tab[0] === 'm' && <MoreDetails data={player.current} className="px-6" />}
+          {tab[0] === 'm' && <MoreDetails data={query.data} className="px-6" />}
         </div>
       )}
     </div>

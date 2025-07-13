@@ -34,23 +34,19 @@ impl Db {
     }
 
     pub async fn get_tracks(&self, filters: &GetTracksFilters) -> Result<Vec<Track>> {
-        let mut qb = QueryBuilder::new("SELECT * FROM tracks");
-        let mut is_first_filter = true;
+        let mut qb = QueryBuilder::new(
+            "SELECT t.*, r.rules FROM tracks AS t LEFT JOIN ruleset AS r ON r.track_hash = t.hash WHERE 1 = 1",
+        );
 
         if let Some(album) = &filters.album {
-            qb.push(if is_first_filter { " WHERE " } else { " AND " })
-                .push("album = ")
-                .push_bind(album);
-            is_first_filter = false;
+            qb.push(" AND t.album = ").push_bind(album);
         }
 
         if let Some(artist) = &filters.artist {
-            qb.push(if is_first_filter { " WHERE " } else { " AND " })
-                .push("artist = ")
-                .push_bind(artist);
+            qb.push(" AND t.artist = ").push_bind(artist);
         }
 
-        qb.push(" ORDER BY name ASC");
+        qb.push(" ORDER BY t.name ASC");
 
         let entries: Vec<TrackRow> = qb.build_query_as().fetch_all(&self.pool).await?;
         let tracks = entries.into_iter().map(Track::from).collect();
@@ -68,10 +64,12 @@ impl Db {
     }
 
     pub async fn get_track(&self, hash: impl AsRef<str>) -> Result<Option<Track>> {
-        let entry: Option<TrackRow> = sqlx::query_as("SELECT * FROM tracks WHERE hash = $1")
-            .bind(hash.as_ref())
-            .fetch_optional(&self.pool)
-            .await?;
+        let entry: Option<TrackRow> = sqlx::query_as(
+            "SELECT t.*, r.rules FROM tracks AS t LEFT JOIN ruleset AS r ON r.track_hash = t.hash WHERE hash = $1",
+        )
+        .bind(hash.as_ref())
+        .fetch_optional(&self.pool)
+        .await?;
 
         let track = entry.map(Track::from);
 
@@ -160,22 +158,10 @@ impl Db {
     pub async fn get_playlist_tracks(&self, name: impl AsRef<str>) -> Result<Vec<Track>> {
         let entries: Vec<TrackRow> = sqlx::query_as(
             "
-            SELECT
-                t.hash,
-                t.path,
-                t.name,
-                t.extension,
-                t.duration,
-                t.cover,
-                t.title,
-                t.artist,
-                t.album,
-                t.album_artist,
-                t.date,
-                t.genre,
-                pt.position
+            SELECT t.*, pt.position, r.rules
             FROM tracks AS t
             JOIN playlist_tracks AS pt ON pt.track_hash = t.hash
+            LEFT JOIN ruleset AS r ON r.track_hash = t.hash
             WHERE pt.playlist_name = $1
             ORDER BY pt.position ASC
             ",
@@ -371,22 +357,10 @@ impl Db {
     pub async fn get_emotion_tracks(&self, name: impl AsRef<str>) -> Result<Vec<Track>> {
         let entries: Vec<TrackRow> = sqlx::query_as(
             "
-            SELECT
-                t.hash,
-                t.path,
-                t.name,
-                t.extension,
-                t.duration,
-                t.cover,
-                t.title,
-                t.artist,
-                t.album,
-                t.album_artist,
-                t.date,
-                t.genre,
-                et.rank
+            SELECT t.*, et.rank, r.rules
             FROM tracks AS t
             JOIN emotion_tracks AS et ON et.track_hash = t.hash
+            LEFT JOIN ruleset AS r ON r.track_hash = t.hash
             WHERE et.emotion_name = $1
             ORDER BY et.rank DESC
             ",
@@ -479,16 +453,6 @@ impl Db {
         tx.commit().await?;
 
         Ok(())
-    }
-
-    pub async fn get_rules(&self, hash: impl AsRef<str>) -> Result<Option<String>> {
-        let rules: Option<String> =
-            sqlx::query_scalar("SELECT rules FROM ruleset WHERE track_hash = $1")
-                .bind(hash.as_ref())
-                .fetch_optional(&self.pool)
-                .await?;
-
-        Ok(rules)
     }
 
     pub async fn set_rules(
@@ -730,6 +694,7 @@ pub struct TrackRow {
     pub album_artist: Option<String>,
     pub date: Option<String>,
     pub genre: Option<String>,
+    pub rules: Option<String>,
     #[sqlx(default)]
     pub position: Option<i64>,
     #[sqlx(default)]

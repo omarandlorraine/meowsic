@@ -14,10 +14,20 @@ import {
   Code,
   addToast,
 } from '@heroui/react'
-import { CheckIcon, CopyIcon, MoveLeftIcon, PlayIcon, PlusIcon, SquarePenIcon, Trash2Icon } from 'lucide-react'
+import {
+  CheckIcon,
+  CopyIcon,
+  ListVideoIcon,
+  MoveLeftIcon,
+  PlayIcon,
+  PlusIcon,
+  SquarePenIcon,
+  Trash2Icon,
+  TrashIcon,
+} from 'lucide-react'
 import { reorder, isEditorOfType } from '@/utils'
 import { setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
-import { usePlayer } from '@/player'
+import { extendQueue, usePlayer } from '@/player'
 import {
   addPlaylist,
   addPlaylistTracks,
@@ -122,6 +132,16 @@ export function PlaylistScreen() {
               onPress={removeSelectedTracksModal.onOpen}>
               <Trash2Icon className="text-lg" /> Remove Selected
             </Button>
+
+            <Button
+              radius="sm"
+              variant="flat"
+              onPress={async () => {
+                await extendQueue(selection.values)
+                selection.clear()
+              }}>
+              <ListVideoIcon className="text-lg" /> Add to Queue
+            </Button>
           </>
         ) : (
           <>
@@ -163,7 +183,7 @@ export function PlaylistScreen() {
                 setEditorType('remove')
                 editorModal.onOpen()
               }}>
-              <Trash2Icon className="text-medium" /> Remove
+              <TrashIcon className="text-medium" /> Remove
             </Button>
 
             <SearchBar value={searchQuery} onChange={setSearchQuery} className="w-120 ml-auto" />
@@ -196,12 +216,14 @@ export function PlaylistScreen() {
         <ModalContent>
           <ModalHeader>Remove Selected Tracks</ModalHeader>
 
-          <ModalBody className="text-default-500">
-            Are you sure you want to remove
-            <Code radius="sm" className="mx-1.5">
-              {selection.values.length}
-            </Code>
-            track{selection.values.length > 1 && 's'} from this playlist?
+          <ModalBody>
+            <div className="text-default-500">
+              Are you sure you want to remove
+              <Code radius="sm" className="mx-1.5">
+                {selection.values.length}
+              </Code>
+              track{selection.values.length > 1 && 's'} from this playlist?
+            </div>
           </ModalBody>
 
           <ModalFooter>

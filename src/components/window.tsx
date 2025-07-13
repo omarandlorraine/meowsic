@@ -26,6 +26,7 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { store, setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
 import { TrackDetailsModal } from '@/tracks/components/details'
 import { usePlayer } from '@/player'
+import { useExecuteRules } from '@/rules'
 import { useScrubPlayer } from '@/scrub-player'
 import { MiniPlayer } from '@/player/components'
 import { EmotionSelect } from '@/emotions/components'
@@ -68,6 +69,13 @@ export function Window() {
 
     prevLocation.current = location
   }, [location])
+
+  useExecuteRules({
+    track: player.current ?? null,
+    elapsed: player.elapsed,
+    seek: player.seek,
+    setVolume: player.setVolume,
+  })
 
   return (
     <>

@@ -127,7 +127,6 @@ async fn main() -> Result<()> {
             commands::db_get_artists,
             commands::db_get_lyrics,
             commands::db_set_lyrics,
-            commands::db_get_rules,
             commands::db_set_rules,
             commands::db_scan_dirs,
             commands::db_get_dirs,

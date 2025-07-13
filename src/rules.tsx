@@ -1,31 +1,13 @@
-import { useEffect, useImperativeHandle, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { Input, Button, Accordion, AccordionItem } from '@heroui/react'
 import { TrashIcon, PlusIcon, XIcon, CheckIcon } from 'lucide-react'
 import type { Track } from '@/tracks'
 
-type RulesEditorProps = { track: Track; data: string; ref: React.Ref<RulesEditorHandle> }
+type RulesEditorProps = { track: Track; values: string[]; setValues: (values: string[]) => void }
 
-export function RulesEditor({ track, data, ref }: RulesEditorProps) {
-  const [values, setValues] = useState<string[]>([])
-
-  useEffect(() => setValues(data.split('\n')), [data])
-
-  useImperativeHandle(ref, () => ({
-    get value() {
-      let data: string = ''
-
-      for (const value of values) {
-        const p = parseRule(value, track)
-        if (!p) continue
-
-        data += value
-        data += '\n'
-      }
-
-      return data.trim()
-    },
-  }))
+export function RulesEditor({ track, values, setValues }: RulesEditorProps) {
+  useEffect(() => setValues(track.rules?.split('\n') ?? []), [track.rules])
 
   return (
     <div className="flex flex-col gap-3 items-start w-120">
@@ -86,7 +68,7 @@ export function RulesEditor({ track, data, ref }: RulesEditorProps) {
         <PlusIcon className="text-medium" /> Add Rule
       </Button>
 
-      <Accordion className="mt-10" defaultExpandedKeys={['usage']}>
+      <Accordion className="mt-10">
         <AccordionItem key="usage" title="Usage">
           <div className="text-default-500 text-small font-mono whitespace-pre-wrap">{DESCRIPTION}</div>
         </AccordionItem>
@@ -95,8 +77,21 @@ export function RulesEditor({ track, data, ref }: RulesEditorProps) {
   )
 }
 
-export async function getRules(track: Track) {
-  return await invoke<string | null>('db_get_rules', { hash: track.hash })
+export function validateRules(rules: string | string[] | null, track: Track) {
+  if (!rules) return ''
+
+  let values = Array.isArray(rules) ? rules : rules.split('\n')
+  let valid: string = ''
+
+  for (const value of values) {
+    const p = parseRule(value, track)
+    if (!p) continue
+
+    valid += value
+    valid += '\n'
+  }
+
+  return valid
 }
 
 export async function setRules(track: Track, rules: string | null = '') {
@@ -140,14 +135,14 @@ function parseRule(rule: string, track: Track): Rule | null {
   }
 }
 
-export function parseRules(data: string, track: Track) {
-  return data
+export function parseRules(track: Track | null) {
+  if (!track?.rules) return []
+
+  return track.rules
     .split('\n')
     .map(it => parseRule(it, track))
     .filter(Boolean) as Rule[]
 }
-
-export type RulesEditorHandle = { get value(): string }
 
 export type Rule = { trigger: number; action: 'seek' | 'volume'; param: number }
 
@@ -199,34 +194,31 @@ at 0:40  volume  60
 `
 
 type UseExecuteRulesOptions = {
-  data: string
   elapsed: number
   track: Track | null
-  rules?: Map<number, Rule>
   seek: (elapsed: number) => void
   setVolume: (volume: number) => void
-  setRules?: (rules: Map<number, Rule>) => void
+  enabled?: boolean
 }
 
-export function useExecuteRules({ data, track, elapsed, seek, setVolume, ...props }: UseExecuteRulesOptions) {
-  // IT'S NOT THE ISSUE WITH THIS STATE, IT'S THE ISSUE WITH THE RULES QUERY NOT UPDATING FOR NEXT TRACK
-  // STORE rules ALONG WITH TRACK
-  const [localRules, setLocalRules] = useState<Map<number, Rule>>(new Map())
+export function useExecuteRules({ track, elapsed, seek, setVolume, enabled = true }: UseExecuteRulesOptions) {
+  const rules = useRef<Map<string, Rule>>(new Map())
 
-  const rules = props.rules ?? localRules
-  const setRules = props.setRules ?? setLocalRules
+  const parse = () =>
+    parseRules(track).reduce((map, rule) => map.set(`${track?.hash}-${rule.trigger}`, rule), new Map())
 
-  useEffect(() => {
-    if (!data || !track) return
-    const map = parseRules(data, track).reduce((map, rule) => map.set(rule.trigger, rule), new Map())
+  const reset = () => {
+    rules.current = parse()
+  }
 
-    setRules(map)
-  }, [data, track, setRules])
+  useEffect(reset, [track])
 
   useEffect(() => {
-    if (!rules.size || !track) return
+    if (!enabled || !rules.current.size || !track) return
 
-    const rule = rules.get(elapsed)
+    const key = `${track.hash}-${elapsed}`
+    const rule = rules.current.get(key)
+
     if (!rule) return
 
     switch (rule.action) {
@@ -242,8 +234,8 @@ export function useExecuteRules({ data, track, elapsed, seek, setVolume, ...prop
         break
     }
 
-    const newRules = new Map(rules)
-    newRules.delete(elapsed)
-    setRules(newRules)
-  }, [elapsed, track, rules, setRules])
+    rules.current.delete(key)
+  }, [enabled, elapsed, track])
+
+  return { reset }
 }

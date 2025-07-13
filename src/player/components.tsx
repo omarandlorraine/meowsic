@@ -18,7 +18,6 @@ import { store, setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
 import { PlayButton, SeekBar } from '@/players'
 import { usePlayer } from '@/player'
 import { getLyrics, PlainLyricsView, SyncedLyricsView } from '@/lyrics'
-import { getRules, useExecuteRules } from '@/rules'
 import { normalizeMeta } from '@/tracks'
 import { AlbumLink, ArtistLink, Cover } from '@/tracks/components/details'
 
@@ -36,22 +35,6 @@ export function Player({ mini }: PlayerProps) {
   })
 
   const [showLyrics, setShowLyrics] = useState(false)
-
-  const queryRules = useQuery({
-    queryKey: ['rules', player.current?.hash],
-    queryFn: async () => await getRules(player.current!),
-    enabled: !!player.current,
-  })
-
-  useExecuteRules({
-    data: queryRules.data ?? '',
-    track: player.current ?? null,
-    elapsed: player.elapsed,
-    seek: player.seek,
-    setVolume: player.setVolume,
-    rules: player.rules,
-    setRules: player.setRules,
-  })
 
   return (
     <div className={cn('flex flex-col items-center justify-center h-full isolate', mini && 'pb-6 pt-3')}>
@@ -172,8 +155,12 @@ export function MiniPlayer() {
       className="fixed w-160 flex flex-col bottom-6 right-6 border border-default/30
       bg-background/25 backdrop-blur-lg z-50 rounded-small shadow-small overflow-hidden">
       <div className="flex items-center p-2 z-10 gap-1">
-        <PictureInPicture2Icon className="text-lg text-default-300 ml-2" />
+        <PictureInPicture2Icon className="text-lg text-default-300 mx-2" />
         {/* // TODO: animate expansion */}
+
+        {/* <Button as={Link} to="/queue" size="sm" radius="sm" variant="light">
+          <ListVideoIcon className="text-medium text-default-500" /> Queue
+        </Button> */}
 
         <Button
           as={Link}

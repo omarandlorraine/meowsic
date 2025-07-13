@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Input, Tooltip } from '@heroui/react'
+import { Button, Input, Switch, Tooltip } from '@heroui/react'
 import { ChevronsLeftIcon, ChevronsRightIcon, PauseIcon, PlayIcon, RotateCcwIcon } from 'lucide-react'
 import { formatTime } from '@/utils'
 import { SeekBar } from '@/players'
@@ -8,7 +8,13 @@ import { normalizeMeta } from '@/tracks'
 import { AlbumLink, ArtistLink, Cover } from '@/tracks/components/details'
 import type { Track } from '@/tracks'
 
-export function ScrubPlayer() {
+type ScrubPlayerProps = {
+  isRulesEnabled?: boolean
+  onToggleRules?: (isEnabled: boolean) => void
+  onReplay?: () => void
+}
+
+export function ScrubPlayer({ onReplay, isRulesEnabled, onToggleRules }: ScrubPlayerProps) {
   const player = useScrubPlayer()
   const meta = normalizeMeta(player.current)
 
@@ -49,11 +55,13 @@ export function ScrubPlayer() {
           error={player.error}
         />
 
-        <Button isIconOnly radius="full" variant="flat" size="lg" color="warning" onPress={() => player.seek(0)}>
-          <RotateCcwIcon className="text-xl" />
-        </Button>
+        {onReplay && (
+          <Button isIconOnly radius="full" variant="flat" size="lg" color="warning" onPress={onReplay}>
+            <RotateCcwIcon className="text-xl" />
+          </Button>
+        )}
 
-        <div className="flex items-center gap-0.5 ml-auto">
+        <div className="flex items-center gap-0.5 ml-10">
           <Button
             isIconOnly
             radius="none"
@@ -90,6 +98,10 @@ export function ScrubPlayer() {
             <ChevronsRightIcon className="text-lg" />
           </Button>
         </div>
+
+        <Switch size="sm" color="warning" className="ml-auto" isSelected={isRulesEnabled} onValueChange={onToggleRules}>
+          Enable Rules
+        </Switch>
       </div>
     </div>
   )

@@ -32,6 +32,7 @@ pub struct Track {
     pub genre: Option<String>,
     pub position: Option<u64>,
     pub rank: Option<u64>,
+    pub rules: Option<String>,
 }
 
 impl Track {
@@ -191,6 +192,7 @@ impl From<TrackRow> for Track {
             album_artist: row.album_artist,
             date: row.date,
             genre: row.genre,
+            rules: row.rules,
             position: row.position.and_then(|x| x.try_into().ok()),
             rank: row.rank.and_then(|x| x.try_into().ok()),
         }

@@ -2,15 +2,14 @@
 
 ## Features
 
-- [ ] lyrics manager
-- [ ] assets manager
 - [ ] playlist import/export
-- [ ] playback rules (like start from x, end at y, play at x speed, y volume, etc.)
 - [ ] external media playback
 - [ ] layout customization
 - [ ] toolips and toasts
 - [ ] guides, shortcuts section, what's new popup
 - [ ] load tracks from zip
+- [x] playback rules
+- [x] lyrics manager
 - [x] track details screen
 - [x] smoother seekbar
 - [x] unsupported audio fallback to web audio

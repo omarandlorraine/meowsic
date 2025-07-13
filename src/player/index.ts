@@ -10,7 +10,6 @@ import type { ShortcutHandler } from '@tauri-apps/plugin-global-shortcut'
 import type { Timeout } from '@/utils'
 import type { Track } from '@/tracks'
 import type { Player } from '@/player/types'
-import type { Rule } from '@/rules'
 
 const backendPlayer = new BackendPlayer()
 const webPlayer = new WebPlayer()
@@ -27,7 +26,6 @@ function initialState(): Store {
     isShuffled: false,
     backupQueue: [],
     player: backendPlayer,
-    rules: new Map(),
   }
 }
 
@@ -218,14 +216,11 @@ export function setRepeat(repeat: Repeat | null) {
   store.setState({ repeat })
 }
 
-function setRules(rules: Map<number, Rule>) {
-  store.setState({ rules })
-}
-
 export async function extendQueue(tracks: Track[]) {
   const state = store.getState()
 
-  const filtered = tracks.filter(track => !state.queue.includes(track))
+  // NOTE: not comparing by reference because the tracks can be from different sources
+  const filtered = tracks.filter(track => !state.queue.some(it => it.hash === track.hash))
   const queue = state.queue.concat(filtered)
 
   await setQueue(queue)
@@ -268,7 +263,6 @@ export function usePlayer() {
     isPaused: state.isPaused,
     elapsed: state.elapsed,
     repeat: state.repeat,
-    rules: state.rules,
     queue: state.queue,
     error: state.error,
     setTemplate,
@@ -276,7 +270,6 @@ export function usePlayer() {
     playTracks,
     setVolume,
     setRepeat,
-    setRules,
     setQueue,
     reset,
     pause,
@@ -363,5 +356,4 @@ export type Store = {
   backupQueue: Track[]
   error?: Error | null
   player: Player
-  rules: Map<number, Rule>
 }
