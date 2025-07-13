@@ -41,7 +41,7 @@ import {
 } from '@/lyrics'
 import { useScrubPlayer } from '@/scrub-player'
 import { ScrubPlayer } from '@/scrub-player/components'
-import { getRules, RulesEditor, setRules } from '@/rules'
+import { getRules, RulesEditor, setRules, useExecuteRules } from '@/rules'
 import type { LucideIcon } from 'lucide-react'
 import type { Track } from '@/tracks'
 import type { Lyrics } from '@/lyrics'
@@ -271,6 +271,14 @@ export function TrackScreen() {
       queryRules.refetch()
       addToast({ color: 'success', title: 'Rules Saved' })
     },
+  })
+
+  useExecuteRules({
+    data: queryRules.data ?? '',
+    track: player.current,
+    elapsed: player.elapsed,
+    seek: player.seek,
+    setVolume: () => {}, // TODO: set volume for scrub player
   })
 
   return (

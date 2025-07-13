@@ -88,7 +88,7 @@ export function RulesEditor({ track, data, ref }: RulesEditorProps) {
 
       <Accordion className="mt-10" defaultExpandedKeys={['usage']}>
         <AccordionItem key="usage" title="Usage">
-          <div className="text-default-500 font-mono whitespace-pre-wrap">{DESCRIPTION}</div>
+          <div className="text-default-500 text-small font-mono whitespace-pre-wrap">{DESCRIPTION}</div>
         </AccordionItem>
       </Accordion>
     </div>
@@ -109,14 +109,14 @@ function parseRule(rule: string, track: Track): Rule | null {
   if (parts[0] !== 'at') return null
 
   const trigger = parseTime(parts[1])
-  if (!trigger) return null
+  if (trigger === null) return null
 
   switch (parts[2]) {
     case 'goto': {
       if (parts[3] === 'next') return { trigger, action: 'seek', param: track.duration }
 
       const param = parseTime(parts[3])
-      if (!param) return null
+      if (param === null) return null
 
       return { trigger, action: 'seek', param }
     }
@@ -149,14 +149,12 @@ export function parseRules(data: string, track: Track) {
 
 export type RulesEditorHandle = { get value(): string }
 
-// export type Rules = { parsed: Rule[]; plain: string }
-
-type Rule = { trigger: number; action: 'seek' | 'volume'; param: number }
+export type Rule = { trigger: number; action: 'seek' | 'volume'; param: number }
 
 const TIME_REGEX = /^(?:(\d{1,2}):)?([0-5]?\d):([0-5]?\d)$|^([0-5]?\d)$/
 
 function parseTime(value: string) {
-  if (!value) return null
+  if (!value && value !== '0') return null
 
   const match = value.match(TIME_REGEX)
   if (!match) return null
@@ -166,7 +164,7 @@ function parseTime(value: string) {
     minutes = 0,
     seconds = 0
 
-  if (solo) {
+  if (solo || solo === '0') {
     seconds = parseInt(solo, 10)
   } else {
     hours = hh ? parseInt(hh, 10) : 0
@@ -189,6 +187,7 @@ at hh:mm:ss volume  n
 
 - hh and mm are optional, ss is required
 - mm and ss cannot be greater than 59
+- no duplicate trigger times or rules
 
 Examples
 
@@ -198,3 +197,53 @@ at 8     seek   +10
 at 2:08  seek   -28
 at 0:40  volume  60
 `
+
+type UseExecuteRulesOptions = {
+  data: string
+  elapsed: number
+  track: Track | null
+  rules?: Map<number, Rule>
+  seek: (elapsed: number) => void
+  setVolume: (volume: number) => void
+  setRules?: (rules: Map<number, Rule>) => void
+}
+
+export function useExecuteRules({ data, track, elapsed, seek, setVolume, ...props }: UseExecuteRulesOptions) {
+  // IT'S NOT THE ISSUE WITH THIS STATE, IT'S THE ISSUE WITH THE RULES QUERY NOT UPDATING FOR NEXT TRACK
+  // STORE rules ALONG WITH TRACK
+  const [localRules, setLocalRules] = useState<Map<number, Rule>>(new Map())
+
+  const rules = props.rules ?? localRules
+  const setRules = props.setRules ?? setLocalRules
+
+  useEffect(() => {
+    if (!data || !track) return
+    const map = parseRules(data, track).reduce((map, rule) => map.set(rule.trigger, rule), new Map())
+
+    setRules(map)
+  }, [data, track, setRules])
+
+  useEffect(() => {
+    if (!rules.size || !track) return
+
+    const rule = rules.get(elapsed)
+    if (!rule) return
+
+    switch (rule.action) {
+      case 'seek': {
+        const value = Math.min(Math.max(rule.param, 0), track.duration)
+        seek(value)
+        break
+      }
+
+      case 'volume':
+        const value = Math.min(Math.max(rule.param, 0), 100)
+        setVolume(value)
+        break
+    }
+
+    const newRules = new Map(rules)
+    newRules.delete(elapsed)
+    setRules(newRules)
+  }, [elapsed, track, rules, setRules])
+}

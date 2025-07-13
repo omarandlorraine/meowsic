@@ -57,6 +57,7 @@ export function SettingsScreen() {
         color: result.startsWith('[ERR]') ? 'danger' : 'success',
       })
     },
+    onError: err => addToast({ timeout: 5000, color: 'danger', title: err.message }),
   })
 
   const mutationBackup = useMutation({

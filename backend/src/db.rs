@@ -83,7 +83,7 @@ impl Db {
         let total = tracks.len() + errors.len();
 
         let mut qb = QueryBuilder::new(
-            "INSERT INTO tracks 
+            "INSERT OR IGNORE INTO tracks 
             (hash, path, name, extension, duration, cover, title, artist, album, album_artist, date, genre) ",
         );
 

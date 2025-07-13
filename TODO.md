@@ -30,7 +30,6 @@
 
 ## Fixes
 
-- [ ] error is not stopping playback (play normal -> play unavailable)
 - [ ] accessible download links in README
 - [ ] hot swapping audio outputs
 - [ ] remove single track from queue

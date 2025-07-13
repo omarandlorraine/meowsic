@@ -10,6 +10,7 @@ import type { ShortcutHandler } from '@tauri-apps/plugin-global-shortcut'
 import type { Timeout } from '@/utils'
 import type { Track } from '@/tracks'
 import type { Player } from '@/player/types'
+import type { Rule } from '@/rules'
 
 const backendPlayer = new BackendPlayer()
 const webPlayer = new WebPlayer()
@@ -26,6 +27,7 @@ function initialState(): Store {
     isShuffled: false,
     backupQueue: [],
     player: backendPlayer,
+    rules: new Map(),
   }
 }
 
@@ -52,16 +54,21 @@ export async function goto(index: number, using?: Player) {
     // case: replace with metadata from the web player
     let queue = state.queue
 
-    if (player instanceof WebPlayer) {
-      const newQueue = Array.from(queue)
-      const duration = await player.getDuration()
+    try {
+      if (player instanceof WebPlayer) {
+        const newQueue = Array.from(queue)
+        const duration = await player.getDuration()
 
-      newQueue[index].duration = duration
-      queue = newQueue
+        newQueue[index].duration = duration
+        queue = newQueue
+      }
+
+      // case: continue the playback if the player is not paused while navigating
+      if (!state.isPaused) await player.play()
+    } catch (err) {
+      invalidateInterval(interval)
+      throw err
     }
-
-    // case: continue the playback if the player is not paused while navigating
-    if (!state.isPaused) await player.play()
 
     store.setState({ current: index, elapsed: 0, interval, error: null, player })
   } catch (err) {
@@ -159,6 +166,7 @@ export async function reset() {
   store.setState(initialState())
 }
 
+// TODO: ? auto clean up the interval
 function createInterval() {
   return setInterval(progress, 1000)
 }
@@ -210,6 +218,10 @@ export function setRepeat(repeat: Repeat | null) {
   store.setState({ repeat })
 }
 
+function setRules(rules: Map<number, Rule>) {
+  store.setState({ rules })
+}
+
 export async function extendQueue(tracks: Track[]) {
   const state = store.getState()
 
@@ -243,6 +255,7 @@ export async function setVolume(volume: number) {
 export function usePlayer() {
   const state = useStore(store)
 
+  // TODO: remove standalone functions
   return {
     setState: store.setState,
     toggleShuffle: state.isShuffled ? unshuffle : shuffle,
@@ -255,6 +268,7 @@ export function usePlayer() {
     isPaused: state.isPaused,
     elapsed: state.elapsed,
     repeat: state.repeat,
+    rules: state.rules,
     queue: state.queue,
     error: state.error,
     setTemplate,
@@ -262,6 +276,7 @@ export function usePlayer() {
     playTracks,
     setVolume,
     setRepeat,
+    setRules,
     setQueue,
     reset,
     pause,
@@ -348,4 +363,5 @@ export type Store = {
   backupQueue: Track[]
   error?: Error | null
   player: Player
+  rules: Map<number, Rule>
 }

@@ -1,25 +1,62 @@
-# Meowsic Player
+<div align="center">
 
-A beautiful, modern, offline music player for windows.
+# 🎵 Meowsic Player
 
-## Features
+A beautiful, modern, offline music player for **Windows**.
 
-- Play most major music formats
-- Manage Playlists (drag and drop ordering)
-- Auto emotion ranking
-- Performant even when you have 100k song entries
-- Searching by music metadata
-- Mini Player
+[![Downloads count](https://img.shields.io/github/downloads/CyanFroste/meowsic/total.svg)](https://github.com/CyanFroste/meowsic/releases)
+[![Latest version](https://img.shields.io/github/v/release/CyanFroste/meowsic?label=latest&color=2596be)](https://github.com/CyanFroste/meowsic/releases/latest)
+[![License](https://img.shields.io/github/license/CyanFroste/meowsic?label=license&color=green)](https://github.com/CyanFroste/meowsic/blob/main/LICENSE)
+
+</div>
+
+---
+
+## ✨ Features
+
+- 🎧 Play most major music formats  
+- 🪄 Manage playlists with drag‑and‑drop ordering  
+- 🤖 Auto emotion ranking (adds songs to emotions list when nearing end)  
+- 💾 High performance even with 100,000+ songs  
+- 🔍 Advanced search based on music metadata  
+- ✂️ Mini player mode for compact control  
 
 ### Emotion Ranking
 
-You can set your current emotion using the icon from the topbar, and whenever any song you play(not from emotions list itself) hits the last 10s mark, it will be added under the current emotion and will have its rank increased. which will later show up under emotions screen.
+When you set your current emotion via the top‑bar icon, any song played (not already in that emotion) will be added after the last 10 seconds and have its rank increased—visible later in your emotions list.
 
-## [Screenshots](./screenshots/index.md)
+---
 
-![](./screenshots/player-maximized-1.png)
-![](./screenshots/playlist-reorder.png)
+## 📸 Screenshots
 
-## Development
+![Player Maximized](./screenshots/player-maximized-1.png)  
+![Playlist Reordering](./screenshots/playlist-reorder.png)
 
-[TODO](./TODO.md)
+More: [See all screenshots](./screenshots/index.md)
+
+---
+
+## 🧑‍💻 Development
+
+Check the [TODO list](./TODO.md) for upcoming features and fixes.
+
+---
+
+## 🚀 Getting Started (Install & Use)
+
+* Download the latest **Meowsic Player for Windows** from our [GitHub Releases](https://github.com/CyanFroste/meowsic/releases/latest).
+* Enjoy **offline playback**, library management, and emotion-based discovery—all powered locally.
+
+---
+
+## ❤️ Contributing
+
+We welcome contributions! Please follow the guide in [CONTRIBUTING.md](./CONTRIBUTING.md). Create issues or PRs to help shape Meowsic’s future.
+
+---
+
+## 🧾 License
+
+Licensed under **MIT**. See [LICENSE](./LICENSE) for details.
+
+---

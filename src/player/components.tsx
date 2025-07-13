@@ -18,6 +18,7 @@ import { store, setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
 import { PlayButton, SeekBar } from '@/players'
 import { usePlayer } from '@/player'
 import { getLyrics, PlainLyricsView, SyncedLyricsView } from '@/lyrics'
+import { getRules, useExecuteRules } from '@/rules'
 import { normalizeMeta } from '@/tracks'
 import { AlbumLink, ArtistLink, Cover } from '@/tracks/components/details'
 
@@ -35,6 +36,22 @@ export function Player({ mini }: PlayerProps) {
   })
 
   const [showLyrics, setShowLyrics] = useState(false)
+
+  const queryRules = useQuery({
+    queryKey: ['rules', player.current?.hash],
+    queryFn: async () => await getRules(player.current!),
+    enabled: !!player.current,
+  })
+
+  useExecuteRules({
+    data: queryRules.data ?? '',
+    track: player.current ?? null,
+    elapsed: player.elapsed,
+    seek: player.seek,
+    setVolume: player.setVolume,
+    rules: player.rules,
+    setRules: player.setRules,
+  })
 
   return (
     <div className={cn('flex flex-col items-center justify-center h-full isolate', mini && 'pb-6 pt-3')}>
