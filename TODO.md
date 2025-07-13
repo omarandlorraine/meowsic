@@ -9,7 +9,7 @@
 - [ ] external media playback
 - [ ] layout customization
 - [ ] toolips and toasts
-- [ ] guides
+- [ ] guides, shortcuts section, what's new popup
 - [ ] load tracks from zip
 - [x] track details screen
 - [x] smoother seekbar
@@ -30,6 +30,10 @@
 
 ## Fixes
 
+- [ ] error is not stopping playback (play normal -> play unavailable)
+- [ ] accessible download links in README
+- [ ] hot swapping audio outputs
+- [ ] remove single track from queue
 - [ ] error handling
 - [ ] better screen size support
 - [ ] optimization of grid by arranging grid cols as fixed height rows

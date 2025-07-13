@@ -481,6 +481,44 @@ impl Db {
         Ok(())
     }
 
+    pub async fn get_rules(&self, hash: impl AsRef<str>) -> Result<Option<String>> {
+        let rules: Option<String> =
+            sqlx::query_scalar("SELECT rules FROM ruleset WHERE track_hash = $1")
+                .bind(hash.as_ref())
+                .fetch_optional(&self.pool)
+                .await?;
+
+        Ok(rules)
+    }
+
+    pub async fn set_rules(
+        &self,
+        hash: impl AsRef<str>,
+        rules: Option<impl AsRef<str>>,
+    ) -> Result<()> {
+        // NOTE: keeping ruleset table as a one to many relationship with tracks
+        // but treating it as a one to one relationship with tracks in application
+
+        let mut tx = self.pool.begin().await?;
+
+        sqlx::query("DELETE FROM ruleset WHERE track_hash = $1")
+            .bind(hash.as_ref())
+            .execute(&mut *tx)
+            .await?;
+
+        if let Some(rules) = rules {
+            sqlx::query("INSERT INTO ruleset (track_hash, rules) VALUES ($1, $2)")
+                .bind(hash.as_ref())
+                .bind(rules.as_ref())
+                .execute(&mut *tx)
+                .await?;
+        }
+
+        tx.commit().await?;
+
+        Ok(())
+    }
+
     pub async fn get_dirs(&self) -> Result<Vec<String>> {
         let paths: Vec<String> = sqlx::query_scalar("SELECT path FROM dirs ORDER BY path ASC")
             .fetch_all(&self.pool)

@@ -133,8 +133,10 @@ export function PlainLyricsView({ data, className }: PlainLyricsViewProps) {
   )
 }
 
+const SYNCED_LYRICS_REGEX = /^\[(\d{2}):(\d{2})\.(\d{1,2})\]\s*(.*)$/
+
 function parseLine(line: string) {
-  const match = line.match(/^\[(\d{2}):(\d{2})\.(\d{1,2})\]\s*(.*)$/)
+  const match = line.match(SYNCED_LYRICS_REGEX)
   if (!match) return null
 
   const [, minutes, seconds, fraction, text] = match

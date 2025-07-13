@@ -70,3 +70,12 @@ CREATE TABLE IF NOT EXISTS lyrics (
     FOREIGN KEY (track_hash) REFERENCES tracks(hash)
         ON UPDATE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS ruleset (
+    id              INTEGER     PRIMARY KEY AUTOINCREMENT,
+    track_hash      TEXT        NOT NULL,
+    rules           TEXT        NOT NULL,
+
+    FOREIGN KEY (track_hash) REFERENCES tracks(hash)
+        ON UPDATE CASCADE
+);

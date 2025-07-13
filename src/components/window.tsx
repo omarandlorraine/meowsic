@@ -43,7 +43,8 @@ export function Window() {
 
   const isHome = location.pathname === '/'
   const showBars = !isPlayerMaximized || !isHome
-  const showMiniPlayer = isMiniPlayerVisible && !isHome && !matchPath('/tracks/:hash', location.pathname)
+  const canShowMiniPlayer = !isHome && !matchPath('/tracks/:hash', location.pathname)
+  const showMiniPlayer = canShowMiniPlayer && isMiniPlayerVisible
 
   useHotkeys(
     ['f', 'b', 'ctrl+h'],
@@ -90,23 +91,27 @@ export function Window() {
 
         <EmotionSelect className="ml-auto" />
 
-        <Button
-          isIconOnly
-          radius="none"
-          variant={isMiniPlayerVisible ? 'flat' : 'light'}
-          color={isMiniPlayerVisible ? 'secondary' : 'default'}
-          onPress={() => setMiniPlayerVisibility(!isMiniPlayerVisible)}>
-          <PictureInPicture2Icon className={cn('text-lg', !isMiniPlayerVisible && 'text-default-500')} />
-        </Button>
+        {isHome && (
+          <Button
+            isIconOnly
+            radius="none"
+            variant={isPlayerMaximized ? 'flat' : 'light'}
+            color={isPlayerMaximized ? 'secondary' : 'default'}
+            onPress={() => setPlayerMaximized(!isPlayerMaximized)}>
+            <MaximizeIcon className={cn('text-lg', !isPlayerMaximized && 'text-default-500')} />
+          </Button>
+        )}
 
-        <Button
-          isIconOnly
-          radius="none"
-          variant={isPlayerMaximized ? 'flat' : 'light'}
-          color={isPlayerMaximized ? 'secondary' : 'default'}
-          onPress={() => setPlayerMaximized(!isPlayerMaximized)}>
-          <MaximizeIcon className={cn('text-lg', !isPlayerMaximized && 'text-default-500')} />
-        </Button>
+        {canShowMiniPlayer && (
+          <Button
+            isIconOnly
+            radius="none"
+            variant={isMiniPlayerVisible ? 'flat' : 'light'}
+            color={isMiniPlayerVisible ? 'secondary' : 'default'}
+            onPress={() => setMiniPlayerVisibility(!isMiniPlayerVisible)}>
+            <PictureInPicture2Icon className={cn('text-lg', !isMiniPlayerVisible && 'text-default-500')} />
+          </Button>
+        )}
 
         <Popover placement="left" containerPadding={8} radius="sm">
           <PopoverTrigger>

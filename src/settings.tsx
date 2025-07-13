@@ -95,7 +95,11 @@ export function SettingsScreen() {
   return (
     <div className="p-3 pt-[calc(theme(spacing.10)+theme(spacing.3))] overflow-auto w-full">
       <div className="flex flex-col items-start gap-3">
-        <div className="text-large my-2">Folders to Scan</div>
+        <div className="text-large mt-2">Folders to Scan</div>
+
+        <div className="text-small mb-2 text-default-500">
+          Select the folders that have your audio files to scan and add them to your library.
+        </div>
 
         {queryDirs.isSuccess && queryDirs.data.length > 0 && (
           <div className="flex flex-col gap-3 p-3 bg-default-50/25 rounded-small">
@@ -176,7 +180,7 @@ export function SettingsScreen() {
         </Select>
 
         <hr className="w-full mt-3 border-default/30" />
-        <div className="text-large mt-2">Data</div>
+        <div className="text-large mt-2">Data Management</div>
 
         <div className="text-small mb-4 text-default-500">
           Backup and Restore your Playlists, Emotion Rankings and Lyrics as a zip file.

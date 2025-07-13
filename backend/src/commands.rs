@@ -286,6 +286,27 @@ pub async fn db_set_lyrics(
 }
 
 #[tauri::command]
+pub async fn db_get_rules(
+    state: State<AppState, '_>,
+    hash: String,
+) -> Result<Option<String>, Error> {
+    let res = state.db.get_rules(&hash).await?;
+
+    Ok(res)
+}
+
+#[tauri::command]
+pub async fn db_set_rules(
+    state: State<AppState, '_>,
+    hash: String,
+    rules: Option<String>,
+) -> Result<(), Error> {
+    state.db.set_rules(&hash, rules.as_ref()).await?;
+
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn db_scan_dirs(state: State<AppState, '_>) -> Result<String, Error> {
     let dirs = state.db.get_dirs().await?;
     let res = state.db.scan_dirs(&dirs).await?;

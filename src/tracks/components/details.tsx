@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { invoke } from '@tauri-apps/api/core'
@@ -41,9 +41,11 @@ import {
 } from '@/lyrics'
 import { useScrubPlayer } from '@/scrub-player'
 import { ScrubPlayer } from '@/scrub-player/components'
+import { getRules, RulesEditor, setRules } from '@/rules'
 import type { LucideIcon } from 'lucide-react'
 import type { Track } from '@/tracks'
 import type { Lyrics } from '@/lyrics'
+import type { RulesEditorHandle } from '@/rules'
 
 export function TrackDetailsModal() {
   const { data, hide } = useTrackDetails()
@@ -211,6 +213,7 @@ export function TrackScreen() {
   const player = useScrubPlayer()
   const [tab, setTab] = useState('lyrics')
   const [selectedLyrics, setSelectedLyrics] = useState<Lyrics | null>(null)
+  const rulesEditor = useRef<RulesEditorHandle>(null)
   const enterLyricsModal = useDisclosure()
 
   const query = useQuery({
@@ -253,24 +256,41 @@ export function TrackScreen() {
     },
   })
 
+  const queryRules = useQuery({
+    queryKey: ['rules', player.current?.hash],
+    queryFn: async () => await getRules(player.current!),
+    enabled: !!player.current,
+  })
+
+  const mutationSaveRules = useMutation({
+    mutationFn: async (rules: string | null) => {
+      if (!player.current) return
+      await setRules(player.current, rules)
+    },
+    onSuccess: () => {
+      queryRules.refetch()
+      addToast({ color: 'success', title: 'Rules Saved' })
+    },
+  })
+
   return (
     <div className="pt-[calc(theme(spacing.10))] overflow-auto size-full flex flex-col">
       {query.isSuccess && query.data && (
-        <div className="py-3 px-6 flex flex-col gap-6 h-full overflow-auto">
-          <div className="w-full rounded-small pt-3 bg-default-50/25 shrink-0">
+        <div className="pt-3 flex flex-col gap-6 h-full overflow-auto">
+          <div className="w-full rounded-small pt-3 bg-default-50/25 shrink-0 px-6">
             <div className="w-4/5 mx-auto">
               <ScrubPlayer />
             </div>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-3 shrink-0 px-3">
             <Tabs variant="underlined" selectedKey={tab} onSelectionChange={key => setTab(key as string)}>
               <Tab key="lyrics" title="Lyrics" />
               <Tab key="rules" title="Rules" />
               <Tab key="more" title="More Details" />
             </Tabs>
 
-            <div className="h-5 border-r border-default/30 mr-3" />
+            {tab[0] !== 'm' && <div className="h-5 border-r border-default/30 mr-3" />}
 
             {tab[0] === 'l' && (
               <>
@@ -306,11 +326,21 @@ export function TrackScreen() {
                 />
               </>
             )}
+
+            {tab[0] === 'r' && (
+              <Button
+                size="sm"
+                radius="sm"
+                variant="flat"
+                onPress={() => mutationSaveRules.mutate(rulesEditor.current?.value ?? null)}>
+                <HeartIcon className="text-medium" /> Save Rules
+              </Button>
+            )}
           </div>
 
           {tab[0] === 'l' && (
-            <div className="flex gap-3 h-full overflow-auto">
-              <ScrollShadow className="flex flex-col gap-1 shrink-0 pr-3">
+            <div className="flex gap-3 h-full overflow-auto px-6">
+              <ScrollShadow className="flex flex-col gap-1 shrink-0 pr-3 pb-3">
                 <Button
                   size="sm"
                   radius="sm"
@@ -350,7 +380,13 @@ export function TrackScreen() {
             </div>
           )}
 
-          {tab[0] === 'm' && <MoreDetails data={player.current} />}
+          {tab[0] === 'r' && player.current && (
+            <div className="h-full overflow-auto px-6 pb-3">
+              <RulesEditor data={queryRules.data ?? ''} track={player.current} ref={rulesEditor} />
+            </div>
+          )}
+
+          {tab[0] === 'm' && <MoreDetails data={player.current} className="px-6" />}
         </div>
       )}
     </div>

@@ -38,7 +38,7 @@ export function Player({ mini }: PlayerProps) {
 
   return (
     <div className={cn('flex flex-col items-center justify-center h-full isolate', mini && 'pb-6 pt-3')}>
-      {isPlayerMaximized && player.current?.cover && (
+      {(isPlayerMaximized || mini) && player.current?.cover && (
         <div className="fixed -inset-10 -z-10 brightness-25 saturate-50 blur-2xl">
           <Image removeWrapper src={getAssetUrl(player.current.cover)} className="size-full object-cover" />
         </div>
@@ -156,8 +156,8 @@ export function MiniPlayer() {
       bg-background/25 backdrop-blur-lg z-50 rounded-small shadow-small overflow-hidden">
       <div className="flex items-center p-2 z-10 gap-1">
         <PictureInPicture2Icon className="text-lg text-default-300 ml-2" />
-
         {/* // TODO: animate expansion */}
+
         <Button
           as={Link}
           to="/"
@@ -170,15 +170,8 @@ export function MiniPlayer() {
           <SquareArrowOutUpLeftIcon className="text-lg text-default-500" />
         </Button>
 
-        <Button
-          isIconOnly
-          size="sm"
-          radius="full"
-          variant="light"
-          color="danger"
-          className="text-foreground"
-          onPress={() => setMiniPlayerVisibility(false)}>
-          <XIcon className="text-lg" />
+        <Button isIconOnly size="sm" radius="full" variant="light" onPress={() => setMiniPlayerVisibility(false)}>
+          <XIcon className="text-lg text-default-500" />
         </Button>
       </div>
 
