@@ -27,6 +27,7 @@ import {
   CheckIcon,
   DatabaseBackupIcon,
   FileScanIcon,
+  HeartIcon,
   ListRestartIcon,
   PlusIcon,
   ShieldAlertIcon,
@@ -261,6 +262,18 @@ export function SettingsScreen() {
             </ModalFooter>
           </ModalContent>
         </Modal>
+
+        <hr className="w-full mt-3 border-default/30" />
+        <div className="text-large my-2">Contribute</div>
+
+        <Button
+          radius="sm"
+          variant="flat"
+          className="self-start"
+          title="Sponsor CyanFroste"
+          onPress={() => openUrl('https://github.com/sponsors/CyanFroste')}>
+          <HeartIcon className="text-lg text-pink-400" /> Sponsor
+        </Button>
 
         <hr className="w-full mt-3 border-default/30" />
         <div className="text-large my-2">About</div>
