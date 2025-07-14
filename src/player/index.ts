@@ -2,17 +2,17 @@ import { createStore, useStore } from 'zustand'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { addToast } from '@heroui/react'
-import { invalidateInterval } from '@/utils'
+import { Interval } from '@/utils'
 import { rankUp } from '@/emotions'
 import { setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
 import { BackendPlayer, WebPlayer } from '@/player/types'
 import type { ShortcutHandler } from '@tauri-apps/plugin-global-shortcut'
-import type { Timeout } from '@/utils'
 import type { Track } from '@/tracks'
 import type { Player } from '@/player/types'
 
 const backendPlayer = new BackendPlayer()
 const webPlayer = new WebPlayer()
+const interval = new Interval(1000, onElapsed)
 
 function initialState(): Store {
   return {
@@ -20,7 +20,6 @@ function initialState(): Store {
     current: 0,
     elapsed: 0,
     isPaused: true,
-    interval: null,
     repeat: null,
     template: null,
     isShuffled: false,
@@ -31,23 +30,20 @@ function initialState(): Store {
 
 export const store = createStore<Store>(initialState)
 
-// NOTE: if not paused, invalidate the interval and create a new one
-// TODO: test any issues with context switching b/w players
-
 // this contains the core logic for all the navigations and context switching
 export async function goto(index: number, using?: Player) {
   const state = store.getState()
-  if (!state.isPaused) invalidateInterval(state.interval)
+  if (!state.isPaused) interval.stop()
 
   const track = state.queue[index]
-  const player = using ?? backendPlayer // selectPlayer(track, [backendPlayer, webPlayer])
+  const player = using ?? backendPlayer
 
   // case: stop the previous player
   if (player !== state.player) state.player.stop()
 
   try {
     await player.goto(index)
-    const interval = !state.isPaused ? createInterval() : null
+    if (!state.isPaused) interval.start()
 
     // case: replace with metadata from the web player
     let queue = state.queue
@@ -64,11 +60,11 @@ export async function goto(index: number, using?: Player) {
       // case: continue the playback if the player is not paused while navigating
       if (!state.isPaused) await player.play()
     } catch (err) {
-      invalidateInterval(interval)
+      interval.stop()
       throw err
     }
 
-    store.setState({ current: index, queue, elapsed: 0, interval, error: null, player })
+    store.setState({ current: index, queue, elapsed: 0, error: null, player })
   } catch (err) {
     console.error(err, track)
 
@@ -86,22 +82,21 @@ export async function seek(elapsed: number) {
   const state = store.getState()
   if (state.elapsed === elapsed) return
 
-  if (!state.isPaused) invalidateInterval(state.interval)
-
+  if (!state.isPaused) interval.stop()
   await state.player.seek(elapsed)
-  const interval = !state.isPaused ? createInterval() : null
+  if (!state.isPaused) interval.start()
 
-  store.setState({ elapsed, interval })
+  store.setState({ elapsed })
 }
 
 export async function pause() {
   const state = store.getState()
   if (state.isPaused || state.error) return
 
-  invalidateInterval(state.interval)
+  interval.stop()
   await state.player.pause()
 
-  store.setState({ interval: null, isPaused: true })
+  store.setState({ isPaused: true })
 }
 
 export async function play() {
@@ -109,9 +104,9 @@ export async function play() {
   if (!state.isPaused || state.error) return
 
   await state.player.play()
-  const interval = createInterval()
+  interval.start()
 
-  store.setState({ interval, isPaused: false })
+  store.setState({ isPaused: false })
 }
 
 export async function playTracks(data: Track | Track[], from = 0) {
@@ -160,17 +155,11 @@ export async function reset() {
   await setCurrent(0)
   await stop()
 
-  const state = store.getState()
-  invalidateInterval(state.interval)
-
+  interval.stop()
   store.setState(initialState())
 }
 
-function createInterval() {
-  return setInterval(progress, 1000)
-}
-
-function progress() {
+function onElapsed() {
   const state = store.getState()
   const current = state.queue.at(state.current)
 
@@ -348,8 +337,6 @@ export type Store = {
   current: number
   elapsed: number
   isPaused: boolean
-  // interval is null if the player is paused
-  interval: Timeout | null
   repeat: Repeat | null
   template: Template | null
   isShuffled: boolean

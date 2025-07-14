@@ -2,12 +2,15 @@
 
 ## Features
 
-- [ ] playlist import/export
+- [ ] hot swapping audio outputs
 - [ ] external media playback
 - [ ] layout customization
 - [ ] toolips and toasts
-- [ ] guides, shortcuts section, what's new popup
 - [ ] load tracks from zip
+- [ ] playlist import/export as m3u
+- [ ] remove single track from queue
+- [ ] guides, shortcuts section, what's new popup
+- [x] backup/restore/reset
 - [x] playback rules
 - [x] lyrics manager
 - [x] track details screen
@@ -29,14 +32,12 @@
 
 ## Fixes
 
-- [ ] accessible download links in README
-- [ ] hot swapping audio outputs
-- [ ] remove single track from queue
-- [ ] error handling
+- [ ] better error handling
 - [ ] better screen size support
-- [ ] optimization of grid by arranging grid cols as fixed height rows
 - [ ] optimizations (memo, etc.)
 - [ ] better animations
 - [ ] better logo
+- [x] optimization of grid by arranging grid cols as fixed height rows
+- [x] accessible download links in README
 - [x] handle playback errors
 - [x] `Add to Queue` won't work under Tracks

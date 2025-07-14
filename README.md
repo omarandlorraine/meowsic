@@ -1,33 +1,35 @@
 <div align="center">
 
-# 🎵 Meowsic Player
+<img src="./assets/icons/logo.png" height="120px" alt="Meowsic Logo" title="Meowsic" />
+
+<br>
+
+# Meowsic
 
 A beautiful, modern, offline music player for **Windows**.
 
 [![Downloads count](https://img.shields.io/github/downloads/CyanFroste/meowsic/total.svg)](https://github.com/CyanFroste/meowsic/releases)
 [![Latest version](https://img.shields.io/github/v/release/CyanFroste/meowsic?label=latest&color=2596be)](https://github.com/CyanFroste/meowsic/releases/latest)
-[![License](https://img.shields.io/github/license/CyanFroste/meowsic?label=license&color=green)](https://github.com/CyanFroste/meowsic/blob/main/LICENSE)
+[![License](https://img.shields.io/github/license/CyanFroste/meowsic?label=license&color=green)](https://github.com/CyanFroste/meowsic/blob/master/LICENSE)
 
 </div>
 
----
+### Download
 
-## ✨ Features
+- **Recommended:** Download and install using the latest installer from [GitHub Releases](https://github.com/CyanFroste/meowsic/releases/latest).
 
-- 🎧 Play most major music formats  
-- 🪄 Manage playlists with drag‑and‑drop ordering  
-- 🤖 Auto emotion ranking (adds songs to emotions list when nearing end)  
-- 💾 High performance even with 100,000+ songs  
-- 🔍 Advanced search based on music metadata  
-- ✂️ Mini player mode for compact control  
+### Main Features
 
-### Emotion Ranking
+- Play most major music formats
+- High performance even with 100,000+ songs
+- Manage playlists with drag‑and‑drop ordering
+- Search based on music metadata
+- Mini player for compact control
+- Synchronized Lyrics viewer
+- Can add Custom Rules to your tracks
+- Export and Import your data
 
-When you set your current emotion via the top‑bar icon, any song played (not already in that emotion) will be added after the last 10 seconds and have its rank increased—visible later in your emotions list.
-
----
-
-## 📸 Screenshots
+### [Screenshots](./screenshots/index.md)
 
 ![Player Maximized](./screenshots/player-maximized-1.png)  
 ![Playlist Reordering](./screenshots/playlist-reorder.png)
@@ -36,27 +38,17 @@ More: [See all screenshots](./screenshots/index.md)
 
 ---
 
-## 🧑‍💻 Development
+### Development
 
-Check the [TODO list](./TODO.md) for upcoming features and fixes.
+Check the [TODO](./TODO.md) list for upcoming features and fixes.  
+Found a bug or have a feature request? Please open an [ISSUE](https://github.com/CyanFroste/meowsic/issues) to get it fixed.  
 
----
+Made with Rust, Tauri, Typescript and React.  
+Thanks to [lrclib.net](https://github.com/tranxuanthang/lrclib) for providing Lyrics API.
 
-## 🚀 Getting Started (Install & Use)
+### [License](./LICENSE)
 
-* Download the latest **Meowsic Player for Windows** from our [GitHub Releases](https://github.com/CyanFroste/meowsic/releases/latest).
-* Enjoy **offline playback**, library management, and emotion-based discovery—all powered locally.
+Copyright © 2025 Cyan Froste
 
----
-
-## ❤️ Contributing
-
-We welcome contributions! Please follow the guide in [CONTRIBUTING.md](./CONTRIBUTING.md). Create issues or PRs to help shape Meowsic’s future.
-
----
-
-## 🧾 License
-
-Licensed under **MIT**. See [LICENSE](./LICENSE) for details.
-
----
+Meowsic is licensed under the Apache License, Version 2.0.  
+See the [LICENSE](./LICENSE) file for more details.

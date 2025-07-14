@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import {
+  Accordion,
+  AccordionItem,
   addToast,
   Button,
   Image,
+  Code,
   Modal,
   ModalBody,
   ModalContent,
@@ -100,9 +103,7 @@ export function SettingsScreen() {
       <div className="flex flex-col items-start gap-3">
         <div className="text-large mt-2">Folders to Scan</div>
 
-        <div className="text-small mb-2 text-default-500">
-          Select the folders that have your audio files to scan and add them to your library.
-        </div>
+        <div className="text-small mb-2 text-default-500">Select the folders that have your audio files.</div>
 
         {queryDirs.isSuccess && queryDirs.data.length > 0 && (
           <div className="flex flex-col gap-3 p-3 bg-default-50/25 rounded-small">
@@ -183,10 +184,19 @@ export function SettingsScreen() {
         </Select>
 
         <hr className="w-full mt-3 border-default/30" />
+
+        <Accordion className="px-0" defaultExpandedKeys={['list']}>
+          <AccordionItem key="list" title="Key Bindings" classNames={{ title: 'text-large', trigger: 'py-2' }}>
+            <KeyBindings />
+          </AccordionItem>
+        </Accordion>
+
+        <hr className="w-full mt-3 border-default/30" />
         <div className="text-large mt-2">Data Management</div>
 
         <div className="text-small mb-4 text-default-500">
-          Backup and Restore your Playlists, Emotion Rankings and Lyrics as a zip file.
+          Backup and Restore your Playlists, Emotion, Lyrics and Rules as a zip file.
+          <br /> You can also reset your data to a clean state.
         </div>
 
         <div className="flex items-center gap-3">
@@ -230,11 +240,12 @@ export function SettingsScreen() {
           <ModalContent>
             <ModalHeader className="text-danger-300 tracking-wider">RESET</ModalHeader>
 
-            <ModalBody className="text-default-500">
+            <ModalBody>
               Are you sure you want to reset all your data?
-              <div className="text-small">
-                This will remove all your Playlists, Emotion Rankings and Lyrics to start over from scratch and write
-                new ones.
+              <div className="text-small text-default-500">
+                This will remove all your Tracks, Playlists, Emotions, Lyrics and Rules to start over from scratch and
+                write new ones. <br /> <br />
+                Your Tracks won't be deleted from your device. You can scan the folders again to add them back.
               </div>
             </ModalBody>
 
@@ -364,4 +375,47 @@ function applyTheme({ fontFamily, fontSize }: Store = store.getState()) {
 export async function init(state = store.getState()) {
   applyTheme(state)
   await setPlayerVolume(state.volume)
+}
+
+function KeyBindings() {
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center">
+        <div className="w-28 shrink-0">
+          <Code>P</Code>
+        </div>
+        <div className="text-small">Toggle Play and Pause</div>
+      </div>
+      <div className="flex items-center">
+        <div className="w-28 shrink-0">
+          <Code>F</Code>
+        </div>
+        <div className="text-small">Toggle Player Fullscreen</div>
+      </div>
+      <div className="flex items-center">
+        <div className="w-28 shrink-0">
+          <Code>B</Code>
+        </div>
+        <div className="text-small">Toggle Mini Player</div>
+      </div>
+      <div className="flex items-center">
+        <div className="w-28 shrink-0">
+          <Code>Ctrl + H</Code>
+        </div>
+        <div className="text-small">Show Player and enter Player Fullscreen</div>
+      </div>
+      <div className="flex items-center">
+        <div className="w-28 shrink-0">
+          <Code>V</Code>
+        </div>
+        <div className="text-small">Show volume controls</div>
+      </div>
+      <div className="flex items-center">
+        <div className="w-28 shrink-0">
+          <Code>Esc</Code>
+        </div>
+        <div className="text-small">Exit Player Fullscreen (use to close modals and other popups as well)</div>
+      </div>
+    </div>
+  )
 }

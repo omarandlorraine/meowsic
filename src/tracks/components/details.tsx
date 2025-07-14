@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { invoke } from '@tauri-apps/api/core'
 import { createStore, useStore } from 'zustand'
@@ -19,10 +19,12 @@ import {
   useDisclosure,
 } from '@heroui/react'
 import {
+  AudioLinesIcon,
   CalendarIcon,
   ClockIcon,
   Disc3Icon,
   HeartIcon,
+  MoveLeftIcon,
   MusicIcon,
   PaintbrushVerticalIcon,
   PencilLineIcon,
@@ -89,7 +91,7 @@ export function TrackDetailsModal() {
 
         <ModalFooter>
           <Button as={Link} radius="sm" variant="flat" isDisabled={!data} to={`/tracks/${data?.hash}`} onPress={hide}>
-            Manage
+            <AudioLinesIcon className="text-lg" /> Manage
           </Button>
         </ModalFooter>
       </ModalContent>
@@ -209,6 +211,7 @@ export function useTrackDetails() {
 }
 
 export function TrackScreen() {
+  const navigate = useNavigate()
   const params = useParams<{ hash: string }>()
   const player = useScrubPlayer()
   const [tab, setTab] = useState('lyrics')
@@ -280,9 +283,13 @@ export function TrackScreen() {
   return (
     <div className="pt-[calc(theme(spacing.10))] overflow-auto size-full flex flex-col">
       {query.isSuccess && query.data && (
-        <div className="pt-3 flex flex-col gap-6 h-full overflow-auto">
-          <div className="w-full rounded-small pt-3 bg-default-50/25 shrink-0 px-6">
-            <div className="w-4/5 mx-auto">
+        <div className="pt-2 flex flex-col gap-6 h-full overflow-auto">
+          <div className="w-full rounded-small pt-3 bg-default-50/25 shrink-0 pl-6 pr-16 flex">
+            <Button isIconOnly radius="sm" variant="flat" onPress={() => navigate(-1)}>
+              <MoveLeftIcon className="text-lg" />
+            </Button>
+
+            <div className="w-[90%] mx-auto">
               <ScrubPlayer
                 isRulesEnabled={isRulesEnabled}
                 onToggleRules={setIsRulesEnabled}

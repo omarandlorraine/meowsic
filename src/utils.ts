@@ -56,8 +56,25 @@ export function isEditorOfType(type: EditorType, expected: EditorType) {
 
 export type Timeout = ReturnType<typeof setInterval>
 
-export function invalidateInterval(interval?: Timeout | null) {
-  if (interval) clearInterval(interval)
+export class Interval {
+  id: Timeout | null = null
+  delay: number
+  fn: () => void
+
+  constructor(delay: number, fn: () => void) {
+    this.delay = delay
+    this.fn = fn
+  }
+
+  start() {
+    if (this.id) clearInterval(this.id)
+    this.id = setInterval(this.fn, this.delay)
+  }
+
+  stop() {
+    if (this.id) clearInterval(this.id)
+    this.id = null
+  }
 }
 
 export function normalizeError(error: unknown) {

@@ -1,22 +1,16 @@
 import { createStore, useStore } from 'zustand'
 import { addToast } from '@heroui/react'
-import { invalidateInterval } from '@/utils'
+import { Interval } from '@/utils'
 import { BackendPlayer, WebPlayer } from '@/scrub-player/types'
-import type { Timeout } from '@/utils'
 import type { Track } from '@/tracks'
 import type { Player } from '@/scrub-player/types'
 
 const backendPlayer = new BackendPlayer()
 const webPlayer = new WebPlayer()
+const interval = new Interval(1000, onElapsed)
 
 function initialState(): Store {
-  return {
-    current: null,
-    elapsed: 0,
-    isPaused: true,
-    interval: null,
-    player: backendPlayer,
-  }
+  return { current: null, elapsed: 0, isPaused: true, player: backendPlayer }
 }
 
 export const store = createStore<Store>(initialState)
@@ -27,7 +21,7 @@ export const store = createStore<Store>(initialState)
 // NOTE: shallow copy of the track can cause reference comparison issue
 export async function start({ ...track }: Track, using?: Player) {
   const state = store.getState()
-  if (!state.isPaused) invalidateInterval(state.interval)
+  if (!state.isPaused) interval.stop()
 
   const player = using ?? backendPlayer
 
@@ -36,18 +30,23 @@ export async function start({ ...track }: Track, using?: Player) {
 
   try {
     await player.start()
-    const interval = !state.isPaused ? createInterval() : null
+    if (!state.isPaused) interval.start()
 
-    // case: replace with metadata from the web player
-    if (player instanceof WebPlayer) {
-      const duration = await player.getDuration()
-      track.duration = duration
+    try {
+      // case: replace with metadata from the web player
+      if (player instanceof WebPlayer) {
+        const duration = await player.getDuration()
+        track.duration = duration
+      }
+
+      // case: continue the playback if the player is not paused while navigating
+      if (!state.isPaused) await player.play()
+    } catch (err) {
+      interval.stop()
+      throw err
     }
 
-    // case: continue the playback if the player is not paused while navigating
-    if (!state.isPaused) await player.play()
-
-    store.setState({ current: track, elapsed: 0, interval, error: null, player })
+    store.setState({ current: track, elapsed: 0, error: null, player })
   } catch (err) {
     console.error(err, track)
 
@@ -63,22 +62,22 @@ export async function start({ ...track }: Track, using?: Player) {
 
 export async function seek(elapsed: number) {
   const state = store.getState()
-  if (!state.isPaused) invalidateInterval(state.interval)
 
+  if (!state.isPaused) interval.stop()
   await state.player.seek(elapsed)
-  const interval = !state.isPaused ? createInterval() : null
+  if (!state.isPaused) interval.start()
 
-  store.setState({ elapsed, interval })
+  store.setState({ elapsed })
 }
 
 export async function pause() {
   const state = store.getState()
   if (state.isPaused || state.error) return
 
-  invalidateInterval(state.interval)
+  interval.stop()
   await state.player.pause()
 
-  store.setState({ interval: null, isPaused: true })
+  store.setState({ isPaused: true })
 }
 
 export async function play() {
@@ -86,26 +85,20 @@ export async function play() {
   if (!state.isPaused || state.error) return
 
   await state.player.play()
-  const interval = createInterval()
+  interval.start()
 
-  store.setState({ interval, isPaused: false })
+  store.setState({ isPaused: false })
 }
 
 export async function reset() {
   await setCurrent(null)
   await stop()
 
-  const state = store.getState()
-  invalidateInterval(state.interval)
-
+  interval.stop()
   store.setState(initialState())
 }
 
-function createInterval() {
-  return setInterval(progress, 1000)
-}
-
-function progress() {
+function onElapsed() {
   const state = store.getState()
   const current = state.current
 
@@ -156,8 +149,6 @@ export type Store = {
   current: Track | null
   elapsed: number
   isPaused: boolean
-  // interval is null if the player is paused
-  interval: Timeout | null
   error?: Error | null
   player: Player
 }

@@ -41,6 +41,7 @@ export function Window() {
 
   const { isPlayerMaximized, isMiniPlayerVisible, volume: globalVolume } = useStore(store)
   const [volume, setVolume] = useState(globalVolume * 100)
+  const [showVolumeControls, setShowVolumeControls] = useState(false)
 
   const isHome = location.pathname === '/'
   const showBars = !isPlayerMaximized || !isHome
@@ -48,19 +49,27 @@ export function Window() {
   const showMiniPlayer = canShowMiniPlayer && isMiniPlayerVisible
 
   useHotkeys(
-    ['f', 'b', 'ctrl+h'],
+    ['f', 'b', 'v', 'p', 'ctrl+h', 'escape'],
     evt => {
       switch (evt.key) {
         case 'f':
           return setPlayerMaximized(!isPlayerMaximized)
         case 'b':
           return setMiniPlayerVisibility(!isMiniPlayerVisible)
+        case 'v':
+          return setShowVolumeControls(prev => !prev)
+        case 'p':
+          if (player.current) player.togglePlay()
+          return
         case 'h':
           setPlayerMaximized(true)
           return navigate('/')
+        case 'Escape':
+          if (isPlayerMaximized) setPlayerMaximized(false)
+          return
       }
     },
-    [isPlayerMaximized, isMiniPlayerVisible],
+    [isPlayerMaximized, isMiniPlayerVisible, player.togglePlay, player.current],
   )
 
   useEffect(() => {
@@ -121,7 +130,12 @@ export function Window() {
           </Button>
         )}
 
-        <Popover placement="left" containerPadding={8} radius="sm">
+        <Popover
+          placement="left"
+          containerPadding={8}
+          radius="sm"
+          isOpen={showVolumeControls}
+          onOpenChange={setShowVolumeControls}>
           <PopoverTrigger>
             <Button isIconOnly radius="none" variant="light">
               <Volume2Icon className="text-lg text-default-500" />

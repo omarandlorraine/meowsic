@@ -441,7 +441,7 @@ impl Db {
             .execute(&mut *tx)
             .await?;
 
-        if let Some(lyrics) = lyrics.as_deref() {
+        if let Some(lyrics) = lyrics {
             sqlx::query("INSERT INTO lyrics (track_hash, plain, synced) VALUES ($1, $2, $3)")
                 .bind(hash.as_ref())
                 .bind(&lyrics.plain)

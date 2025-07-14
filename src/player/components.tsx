@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query'
 import { Button, Image, cn } from '@heroui/react'
 import { useStore } from 'zustand'
 import {
+  AudioLinesIcon,
+  LetterTextIcon,
   PictureInPicture2Icon,
   Repeat1Icon,
   RepeatIcon,
@@ -37,7 +39,11 @@ export function Player({ mini }: PlayerProps) {
   const [showLyrics, setShowLyrics] = useState(false)
 
   return (
-    <div className={cn('flex flex-col items-center justify-center h-full isolate', mini && 'pb-6 pt-3')}>
+    <div
+      className={cn('flex flex-col items-center justify-center h-full isolate', mini && 'pb-6 pt-3')}
+      onDoubleClick={() => {
+        if (!mini) setPlayerMaximized(!isPlayerMaximized)
+      }}>
       {(isPlayerMaximized || mini) && player.current?.cover && (
         <div className="fixed -inset-10 -z-10 brightness-25 saturate-50 blur-2xl">
           <Image removeWrapper src={getAssetUrl(player.current.cover)} className="size-full object-cover" />
@@ -76,22 +82,13 @@ export function Player({ mini }: PlayerProps) {
 
             {meta.album && <AlbumLink>{meta.album}</AlbumLink>}
             {meta.artist && <ArtistLink>{meta.artist}</ArtistLink>}
-
-            {queryLyrics.data && (
-              <Button
-                size="sm"
-                radius="sm"
-                variant="flat"
-                className="tracking-wider h-6"
-                onPress={() => setShowLyrics(!showLyrics)}>
-                {showLyrics ? 'HIDE' : 'SHOW'} LYRICS
-              </Button>
-            )}
           </div>
         </>
       )}
 
-      <div className={cn('flex flex-col mx-auto gap-3', mini ? 'w-full p-8' : 'w-4/5 p-3')}>
+      <div
+        className={cn('flex flex-col mx-auto gap-3', mini ? 'w-full p-8' : 'w-4/5 p-3')}
+        onDoubleClick={evt => evt.stopPropagation()}>
         <SeekBar
           onSeek={player.seek}
           elapsed={player.elapsed}
@@ -105,7 +102,23 @@ export function Player({ mini }: PlayerProps) {
         </div>
       </div>
 
-      <div className="flex w-full items-center justify-center gap-3">
+      <div className="flex w-full items-center justify-center gap-3 group" onDoubleClick={evt => evt.stopPropagation()}>
+        {!mini && (
+          <Button
+            size="sm"
+            radius="sm"
+            isDisabled={!queryLyrics.data}
+            variant={showLyrics ? 'flat' : 'light'}
+            onPress={() => setShowLyrics(!showLyrics)}
+            className={cn(
+              'w-28 mr-10 tracking-widest',
+              isPlayerMaximized &&
+                'opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-hover:disabled:opacity-50',
+            )}>
+            <LetterTextIcon className="text-medium text-default-500 shrink-0" /> LYRICS
+          </Button>
+        )}
+
         <Button
           isIconOnly
           radius="full"
@@ -144,6 +157,23 @@ export function Player({ mini }: PlayerProps) {
           onPress={player.toggleShuffle}>
           <ShuffleIcon className="text-lg" />
         </Button>
+
+        {!mini && (
+          <Button
+            as={Link}
+            size="sm"
+            radius="sm"
+            variant="light"
+            isDisabled={!player.current}
+            className={cn(
+              'w-28 ml-10 tracking-widest',
+              isPlayerMaximized &&
+                'opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-hover:disabled:opacity-50',
+            )}
+            to={`/tracks/${player.current?.hash}`}>
+            <AudioLinesIcon className="text-medium text-default-500 shrink-0" /> MANAGE
+          </Button>
+        )}
       </div>
     </div>
   )

@@ -170,6 +170,73 @@ function parseTime(value: string) {
   return hours * 3600 + minutes * 60 + seconds
 }
 
+type UseExecuteRulesOptions = {
+  elapsed: number
+  track: Track | null
+  seek: (elapsed: number) => void
+  setVolume: (volume: number) => void
+  enabled?: boolean
+}
+
+export function useExecuteRules({ track, elapsed, seek, setVolume, enabled = true }: UseExecuteRulesOptions) {
+  // NOTE: each rule is executed once per track
+  // if you play the same track from the same source, the rules will be skipped
+  // because the track reference is the same
+
+  const rules = useRef<Map<string, Rule>>(new Map())
+  const prevElapsed = useRef(elapsed)
+
+  const parse = () =>
+    !track
+      ? new Map()
+      : parseRules(track).reduce((map, rule) => map.set(`${track.hash}-${rule.trigger}`, rule), new Map())
+
+  const reset = () => {
+    rules.current = parse()
+  }
+
+  useEffect(reset, [track])
+
+  // setQueue (global) -> seek (here) -> goto (global)
+  // there's a sync issue b/w track change, seek and goto again changing track and setting elapsed to 0 directly
+  // also, adding the same song from anywhere won't reparse rules
+
+  useEffect(() => {
+    if (!enabled || !rules.current.size || !track) {
+      prevElapsed.current = elapsed
+      return
+    }
+
+    const key = `${track.hash}-${elapsed}`
+    const rule = rules.current.get(key)
+
+    switch (rule?.action) {
+      case 'seek': {
+        const value = Math.min(Math.max(rule.param, 0), track.duration)
+
+        if (value === elapsed) break
+        seek(value)
+
+        // NOTE: workaround for seek sync issue, this will case a seekbar jump
+        // also, this won't cause the rule to be deleted when it jumps back
+        if (prevElapsed.current !== elapsed) rules.current.delete(key)
+        break
+      }
+
+      case 'volume':
+        const value = Math.min(Math.max(rule.param, 0), 100)
+        setVolume(value)
+
+        rules.current.delete(key)
+        break
+    }
+
+    prevElapsed.current = elapsed
+  }, [enabled, elapsed, track])
+
+  return { reset }
+}
+
 // TODO: speed rules
 
 const DESCRIPTION = ` 
@@ -192,63 +259,3 @@ at 8     seek   +10
 at 2:08  seek   -28
 at 0:40  volume  60
 `
-
-type UseExecuteRulesOptions = {
-  elapsed: number
-  track: Track | null
-  seek: (elapsed: number) => void
-  setVolume: (volume: number) => void
-  enabled?: boolean
-}
-
-export function useExecuteRules({ track, elapsed, seek, setVolume, enabled = true }: UseExecuteRulesOptions) {
-  const rules = useRef<Map<string, Rule>>(new Map())
-  const prevElapsed = useRef(elapsed)
-
-  const parse = () =>
-    !track
-      ? new Map()
-      : parseRules(track).reduce((map, rule) => map.set(`${track.hash}-${rule.trigger}`, rule), new Map())
-
-  const reset = () => {
-    rules.current = parse()
-  }
-
-  useEffect(reset, [track])
-
-  // setQueue (global) -> seek (here) -> goto (global)
-  // there's a sync issue b/w track change, seek and goto again changing track and setting elapsed to 0 directly
-  // also, adding the same song from anywhere won't reparse rules
-
-  useEffect(() => {
-    if (!enabled || !rules.current.size || !track) return
-
-    const key = `${track.hash}-${elapsed}`
-    const rule = rules.current.get(key)
-
-    if (!rule) return
-
-    switch (rule.action) {
-      case 'seek': {
-        const value = Math.min(Math.max(rule.param, 0), track.duration)
-        if (value === elapsed) break
-
-        // TEMPFIX: workaround for seek sync issue
-        if (prevElapsed.current === elapsed) setTimeout(() => seek(value), 50)
-        else seek(value)
-
-        break
-      }
-
-      case 'volume':
-        const value = Math.min(Math.max(rule.param, 0), 100)
-        setVolume(value)
-        break
-    }
-
-    prevElapsed.current = elapsed
-    rules.current.delete(key)
-  }, [enabled, elapsed, track])
-
-  return { reset }
-}
