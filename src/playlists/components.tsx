@@ -14,10 +14,20 @@ import {
   Code,
   addToast,
 } from '@heroui/react'
-import { CheckIcon, CopyIcon, MoveLeftIcon, PlayIcon, PlusIcon, SquarePenIcon, Trash2Icon } from 'lucide-react'
+import {
+  CheckIcon,
+  CopyIcon,
+  ListVideoIcon,
+  MoveLeftIcon,
+  PlayIcon,
+  PlusIcon,
+  SquarePenIcon,
+  Trash2Icon,
+  TrashIcon,
+} from 'lucide-react'
 import { reorder, isEditorOfType } from '@/utils'
 import { setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
-import { usePlayer } from '@/player'
+import { extendQueue, usePlayer } from '@/player'
 import {
   addPlaylist,
   addPlaylistTracks,
@@ -122,6 +132,16 @@ export function PlaylistScreen() {
               onPress={removeSelectedTracksModal.onOpen}>
               <Trash2Icon className="text-lg" /> Remove Selected
             </Button>
+
+            <Button
+              radius="sm"
+              variant="flat"
+              onPress={async () => {
+                await extendQueue(selection.values)
+                selection.clear()
+              }}>
+              <ListVideoIcon className="text-lg" /> Add to Queue
+            </Button>
           </>
         ) : (
           <>
@@ -163,7 +183,7 @@ export function PlaylistScreen() {
                 setEditorType('remove')
                 editorModal.onOpen()
               }}>
-              <Trash2Icon className="text-medium" /> Remove
+              <TrashIcon className="text-medium" /> Remove
             </Button>
 
             <SearchBar value={searchQuery} onChange={setSearchQuery} className="w-120 ml-auto" />
@@ -273,7 +293,7 @@ export function PlaylistsScreen() {
 
   const onPlay = async (name: string) => {
     const tracks = await getPlaylistTracks(name)
-    if (!tracks.length) return addToast({ description: 'Empty Playlist' })
+    if (!tracks.length) return addToast({ title: 'Empty Playlist' })
 
     await player.playTracks(tracks)
     player.setTemplate(null)

@@ -1,7 +1,7 @@
 use crate::db::TrackRow;
 use crate::utils;
 use anyhow::{Context, Result};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::fmt::Debug;
 use std::fs;
@@ -32,6 +32,7 @@ pub struct Track {
     pub genre: Option<String>,
     pub position: Option<u64>,
     pub rank: Option<u64>,
+    pub rules: Option<String>,
 }
 
 impl Track {
@@ -55,7 +56,8 @@ impl Track {
             .trim_end_matches(&format!(".{extension}"))
             .to_string();
 
-        let hash = utils::hash(&file_name);
+        // IDEAL: ideally this could have been a uuid
+        let hash = utils::hash(file_name.as_bytes());
 
         let mss = MediaSourceStream::new(Box::new(file), Default::default());
         let mut hint = Hint::new();
@@ -190,6 +192,7 @@ impl From<TrackRow> for Track {
             album_artist: row.album_artist,
             date: row.date,
             genre: row.genre,
+            rules: row.rules,
             position: row.position.and_then(|x| x.try_into().ok()),
             rank: row.rank.and_then(|x| x.try_into().ok()),
         }
@@ -200,6 +203,12 @@ impl From<TrackRow> for Track {
 pub struct Album {
     pub name: String,
     pub cover: Option<String>,
+}
+
+#[derive(sqlx::FromRow, Debug, Clone, Serialize, Deserialize)]
+pub struct Lyrics {
+    pub plain: String,
+    pub synced: String,
 }
 
 pub async fn find_artist_image(

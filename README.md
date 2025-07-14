@@ -1,25 +1,54 @@
-# Meowsic Player
+<div align="center">
 
-A beautiful, modern, offline music player for windows.
+<img src="./assets/icons/logo.png" height="120px" alt="Meowsic Logo" title="Meowsic" />
 
-## Features
+<br>
+
+# Meowsic
+
+A beautiful, modern, offline music player for **Windows**.
+
+[![Downloads count](https://img.shields.io/github/downloads/CyanFroste/meowsic/total.svg)](https://github.com/CyanFroste/meowsic/releases)
+[![Latest version](https://img.shields.io/github/v/release/CyanFroste/meowsic?label=latest&color=2596be)](https://github.com/CyanFroste/meowsic/releases/latest)
+[![License](https://img.shields.io/github/license/CyanFroste/meowsic?label=license&color=green)](https://github.com/CyanFroste/meowsic/blob/master/LICENSE)
+
+</div>
+
+### Download
+
+- **Recommended:** Download and install using the latest installer from [GitHub Releases](https://github.com/CyanFroste/meowsic/releases/latest).
+
+### Main Features
 
 - Play most major music formats
-- Manage Playlists (drag and drop ordering)
-- Auto emotion ranking
-- Performant even when you have 100k song entries
-- Searching by music metadata
-- Mini Player
+- High performance even with 100,000+ songs
+- Manage playlists with drag‑and‑drop ordering
+- Search based on music metadata
+- Mini player for compact control
+- Synchronized Lyrics viewer
+- Can add Custom Rules to your tracks
+- Export and Import your data
 
-### Emotion Ranking
+### [Screenshots](./screenshots/index.md)
 
-You can set your current emotion using the icon from the topbar, and whenever any song you play(not from emotions list itself) hits the last 10s mark, it will be added under the current emotion and will have its rank increased. which will later show up under emotions screen.
+![Player Maximized](./screenshots/player-maximized-1.png)  
+![Playlist Reordering](./screenshots/playlist-reorder.png)
 
-## [Screenshots](./screenshots/index.md)
+More: [See all screenshots](./screenshots/index.md)
 
-![](./screenshots/player-maximized-1.png)
-![](./screenshots/playlist-reorder.png)
+---
 
-## Development
+### Development
 
-[TODO](./TODO.md)
+Check the [TODO](./TODO.md) list for upcoming features and fixes.  
+Found a bug or have a feature request? Please open an [ISSUE](https://github.com/CyanFroste/meowsic/issues) to get it fixed.  
+
+Made with Rust, Tauri, Typescript and React.  
+Thanks to [lrclib.net](https://github.com/tranxuanthang/lrclib) for providing Lyrics API.
+
+### [License](./LICENSE)
+
+Copyright © 2025 Cyan Froste
+
+Meowsic is licensed under the Apache License, Version 2.0.  
+See the [LICENSE](./LICENSE) file for more details.

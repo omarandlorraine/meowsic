@@ -56,3 +56,16 @@ VALUES
     ('Angry', '#d93025', 'angry.png'),
     ('Serene', '#a8d8b9', 'serene.png'),    
     ('Neutral', '#fff1e6', 'neutral.png');
+
+CREATE TABLE IF NOT EXISTS lyrics (
+    id              INTEGER     PRIMARY KEY AUTOINCREMENT,
+    track_hash      TEXT        NOT NULL,
+    plain           TEXT        NOT NULL,
+    synced          TEXT        NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ruleset (
+    id              INTEGER     PRIMARY KEY AUTOINCREMENT,
+    track_hash      TEXT        NOT NULL,
+    rules           TEXT        NOT NULL
+);

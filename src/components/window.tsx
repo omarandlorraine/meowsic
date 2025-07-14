@@ -1,7 +1,7 @@
-import { useState } from 'react'
-import { Button, cn, Popover, PopoverContent, PopoverTrigger, Slider } from '@heroui/react'
+import { useEffect, useRef, useState } from 'react'
+import { Link, matchPath, Outlet, useLocation, useNavigate } from 'react-router'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { Link, Outlet, useLocation } from 'react-router'
+import { Button, cn, Popover, PopoverContent, PopoverTrigger, Slider } from '@heroui/react'
 import { useStore } from 'zustand'
 import {
   Disc3Icon,
@@ -25,33 +25,66 @@ import {
 import { useHotkeys } from 'react-hotkeys-hook'
 import { store, setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
 import { TrackDetailsModal } from '@/tracks/components/details'
+import { usePlayer } from '@/player'
+import { useExecuteRules } from '@/rules'
+import { useScrubPlayer } from '@/scrub-player'
 import { MiniPlayer } from '@/player/components'
 import { EmotionSelect } from '@/emotions/components'
 import type { LucideIcon } from 'lucide-react'
 
 export function Window() {
+  const navigate = useNavigate()
   const location = useLocation()
-  const currentWindow = getCurrentWindow()
-  const { isPlayerMaximized, isMiniPlayerVisible, volume: globalVolume } = useStore(store)
+  const prevLocation = useRef(location)
+  const player = usePlayer()
+  const scrubPlayer = useScrubPlayer()
 
-  const [isMaximized, setIsMaximized] = useState(false)
+  const { isPlayerMaximized, isMiniPlayerVisible, volume: globalVolume } = useStore(store)
   const [volume, setVolume] = useState(globalVolume * 100)
+  const [showVolumeControls, setShowVolumeControls] = useState(false)
 
   const isHome = location.pathname === '/'
   const showBars = !isPlayerMaximized || !isHome
+  const canShowMiniPlayer = !isHome && !matchPath('/tracks/:hash', location.pathname)
+  const showMiniPlayer = canShowMiniPlayer && isMiniPlayerVisible
 
   useHotkeys(
-    ['f', 'b'],
+    ['f', 'b', 'v', 'p', 'ctrl+h', 'escape'],
     evt => {
       switch (evt.key) {
         case 'f':
           return setPlayerMaximized(!isPlayerMaximized)
         case 'b':
           return setMiniPlayerVisibility(!isMiniPlayerVisible)
+        case 'v':
+          return setShowVolumeControls(prev => !prev)
+        case 'p':
+          if (player.current) player.togglePlay()
+          return
+        case 'h':
+          setPlayerMaximized(true)
+          return navigate('/')
+        case 'Escape':
+          if (isPlayerMaximized) setPlayerMaximized(false)
+          return
       }
     },
-    [isPlayerMaximized, isMiniPlayerVisible],
+    [isPlayerMaximized, isMiniPlayerVisible, player.togglePlay, player.current],
   )
+
+  useEffect(() => {
+    if (matchPath('/tracks/:hash', location.pathname) && player.current && !player.isPaused) player.pause()
+    else if (matchPath('/tracks/:hash', prevLocation.current.pathname)) scrubPlayer.reset()
+
+    prevLocation.current = location
+  }, [location])
+
+  useExecuteRules({
+    track: player.current ?? null,
+    elapsed: player.elapsed,
+    seek: player.seek,
+    setVolume: player.setVolume,
+  })
 
   return (
     <>
@@ -75,25 +108,34 @@ export function Window() {
 
         <EmotionSelect className="ml-auto" />
 
-        <Button
-          isIconOnly
-          radius="none"
-          variant={isMiniPlayerVisible ? 'flat' : 'light'}
-          color={isMiniPlayerVisible ? 'secondary' : 'default'}
-          onPress={() => setMiniPlayerVisibility(!isMiniPlayerVisible)}>
-          <PictureInPicture2Icon className={cn('text-lg', !isMiniPlayerVisible && 'text-default-500')} />
-        </Button>
+        {isHome && (
+          <Button
+            isIconOnly
+            radius="none"
+            variant={isPlayerMaximized ? 'flat' : 'light'}
+            color={isPlayerMaximized ? 'secondary' : 'default'}
+            onPress={() => setPlayerMaximized(!isPlayerMaximized)}>
+            <MaximizeIcon className={cn('text-lg', !isPlayerMaximized && 'text-default-500')} />
+          </Button>
+        )}
 
-        <Button
-          isIconOnly
-          radius="none"
-          variant={isPlayerMaximized ? 'flat' : 'light'}
-          color={isPlayerMaximized ? 'secondary' : 'default'}
-          onPress={() => setPlayerMaximized(!isPlayerMaximized)}>
-          <MaximizeIcon className={cn('text-lg', !isPlayerMaximized && 'text-default-500')} />
-        </Button>
+        {canShowMiniPlayer && (
+          <Button
+            isIconOnly
+            radius="none"
+            variant={isMiniPlayerVisible ? 'flat' : 'light'}
+            color={isMiniPlayerVisible ? 'secondary' : 'default'}
+            onPress={() => setMiniPlayerVisibility(!isMiniPlayerVisible)}>
+            <PictureInPicture2Icon className={cn('text-lg', !isMiniPlayerVisible && 'text-default-500')} />
+          </Button>
+        )}
 
-        <Popover placement="left" containerPadding={8} radius="sm">
+        <Popover
+          placement="left"
+          containerPadding={8}
+          radius="sm"
+          isOpen={showVolumeControls}
+          onOpenChange={setShowVolumeControls}>
           <PopoverTrigger>
             <Button isIconOnly radius="none" variant="light">
               <Volume2Icon className="text-lg text-default-500" />
@@ -126,31 +168,7 @@ export function Window() {
         </Popover>
 
         <div className="h-6 border-r border-default/30" />
-
-        <Button variant="light" radius="none" className="min-w-12" onPress={() => currentWindow.minimize()}>
-          <MinusIcon className="text-lg text-default-500" />
-        </Button>
-
-        <Button
-          variant="light"
-          radius="none"
-          className="min-w-12 text-default-500 text-lg"
-          onPress={() => {
-            currentWindow.toggleMaximize()
-            setIsMaximized(!isMaximized)
-          }}>
-          {isMaximized ? <ChevronsDownUpIcon className="rotate-45" /> : <ChevronsUpDownIcon className="rotate-45" />}
-        </Button>
-
-        <Button
-          isIconOnly
-          color="danger"
-          variant="light"
-          radius="none"
-          className="min-w-12"
-          onPress={() => currentWindow.close()}>
-          <XIcon className="text-lg text-default-500" />
-        </Button>
+        <WindowControls />
       </div>
 
       <div className="flex h-full">
@@ -173,9 +191,42 @@ export function Window() {
         <Outlet />
       </div>
 
-      {isMiniPlayerVisible && !isHome && <MiniPlayer />}
-
+      {showMiniPlayer && <MiniPlayer />}
       <TrackDetailsModal />
+    </>
+  )
+}
+
+function WindowControls() {
+  const currentWindow = getCurrentWindow()
+  const [isMaximized, setIsMaximized] = useState(false)
+
+  return (
+    <>
+      <Button variant="light" radius="none" className="min-w-12" onPress={() => currentWindow.minimize()}>
+        <MinusIcon className="text-lg text-default-500" />
+      </Button>
+
+      <Button
+        radius="none"
+        variant="light"
+        className="min-w-12 text-default-500 text-lg"
+        onPress={() => {
+          currentWindow.toggleMaximize()
+          setIsMaximized(!isMaximized)
+        }}>
+        {isMaximized ? <ChevronsDownUpIcon className="rotate-45" /> : <ChevronsUpDownIcon className="rotate-45" />}
+      </Button>
+
+      <Button
+        isIconOnly
+        color="danger"
+        variant="light"
+        radius="none"
+        className="min-w-12"
+        onPress={() => currentWindow.close()}>
+        <XIcon className="text-lg text-default-500" />
+      </Button>
     </>
   )
 }

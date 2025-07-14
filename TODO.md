@@ -2,19 +2,17 @@
 
 ## Features
 
-- [ ] lyrics manager
-- [ ] assets manager
-- [ ] animations
+- [ ] hot swapping audio outputs
 - [ ] external media playback
-- [ ] playlist import/export
 - [ ] layout customization
 - [ ] toolips and toasts
-- [ ] logo
-- [ ] guides
-- [ ] playback rules (like start from x, end at y, play at x speed, y volume, etc.)
-- [ ] better screen size support
-- [ ] optimization of grid by arranging grid cols as fixed height rows
-- [ ] optimizations (memo, etc.)
+- [ ] load tracks from zip
+- [ ] playlist import/export as m3u
+- [ ] remove single track from queue
+- [ ] guides, shortcuts section, what's new popup
+- [x] backup/restore/reset
+- [x] playback rules
+- [x] lyrics manager
 - [x] track details screen
 - [x] smoother seekbar
 - [x] unsupported audio fallback to web audio
@@ -34,6 +32,12 @@
 
 ## Fixes
 
-- [ ] error handling
+- [ ] better error handling
+- [ ] better screen size support
+- [ ] optimizations (memo, etc.)
+- [ ] better animations
+- [ ] better logo
+- [x] optimization of grid by arranging grid cols as fixed height rows
+- [x] accessible download links in README
 - [x] handle playback errors
 - [x] `Add to Queue` won't work under Tracks

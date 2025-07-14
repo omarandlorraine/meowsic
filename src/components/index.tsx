@@ -1,9 +1,6 @@
-import { useStore } from 'zustand'
 import { cn, Checkbox, Chip, Input } from '@heroui/react'
-import { useHotkeys } from 'react-hotkeys-hook'
 import { SearchIcon } from 'lucide-react'
 import { Player } from '@/player/components'
-import { setPlayerMaximized, store } from '@/settings'
 import type { UseSelection } from '@/utils'
 
 type SearchBarProps = { value: string; onChange: (value: string) => void; className?: string }
@@ -65,18 +62,8 @@ export function AppBar({ className, ...props }: React.HTMLAttributes<HTMLDivElem
 }
 
 export function HomeScreen() {
-  const isPlayerMaximized = useStore(store, state => state.isPlayerMaximized)
-
-  useHotkeys(
-    'escape',
-    () => {
-      if (isPlayerMaximized) setPlayerMaximized(false)
-    },
-    [isPlayerMaximized],
-  )
-
   return (
-    <div className="p-3 pt-[calc(theme(spacing.10)+theme(spacing.1))] w-full">
+    <div className="p-3 pt-[calc(theme(spacing.10)+theme(spacing.2))] w-full">
       <Player />
     </div>
   )

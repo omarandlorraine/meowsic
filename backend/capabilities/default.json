@@ -27,7 +27,7 @@
     "global-shortcut:allow-unregister",
     {
       "identifier": "http:default",
-      "allow": [{ "url": "*" }]
+      "allow": [{ "url": "https://lrclib.net/*" }]
     }
   ]
 }

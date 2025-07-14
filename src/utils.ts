@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { convertFileSrc } from '@tauri-apps/api/core'
+import { useDisclosure } from '@heroui/react'
 
 export function getAssetUrl(path: string) {
   // return `http://asset.localhost/${path}`
@@ -53,6 +54,29 @@ export function isEditorOfType(type: EditorType, expected: EditorType) {
   return type[0] === expected[0]
 }
 
+export type Timeout = ReturnType<typeof setInterval>
+
+export class Interval {
+  id: Timeout | null = null
+  delay: number
+  fn: () => void
+
+  constructor(delay: number, fn: () => void) {
+    this.delay = delay
+    this.fn = fn
+  }
+
+  start() {
+    if (this.id) clearInterval(this.id)
+    this.id = setInterval(this.fn, this.delay)
+  }
+
+  stop() {
+    if (this.id) clearInterval(this.id)
+    this.id = null
+  }
+}
+
 export function normalizeError(error: unknown) {
   let message = 'Unknown error'
   if (!error) return new Error(message)
@@ -65,3 +89,20 @@ export function normalizeError(error: unknown) {
 
   return new Error(message)
 }
+
+export function normalizeMediaError(error: MediaError | null) {
+  switch (error?.code) {
+    case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+      return new Error('Media source not supported or found')
+    case MediaError.MEDIA_ERR_ABORTED:
+      return new Error('Playback aborted')
+    case MediaError.MEDIA_ERR_NETWORK:
+      return new Error('Network error')
+    case MediaError.MEDIA_ERR_DECODE:
+      return new Error('Decoding error')
+    default:
+      return new Error('Unknown error')
+  }
+}
+
+export type Disclosure = ReturnType<typeof useDisclosure>

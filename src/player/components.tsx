@@ -1,11 +1,12 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router'
+import { useQuery } from '@tanstack/react-query'
+import { Button, Image, cn } from '@heroui/react'
 import { useStore } from 'zustand'
-import { Button, cn, Image, Slider, Tooltip } from '@heroui/react'
 import {
-  PauseIcon,
+  AudioLinesIcon,
+  LetterTextIcon,
   PictureInPicture2Icon,
-  PlayIcon,
   Repeat1Icon,
   RepeatIcon,
   ShuffleIcon,
@@ -16,7 +17,9 @@ import {
 } from 'lucide-react'
 import { formatTime, getAssetUrl } from '@/utils'
 import { store, setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
+import { PlayButton, SeekBar } from '@/players'
 import { usePlayer } from '@/player'
+import { getLyrics, PlainLyricsView, SyncedLyricsView } from '@/lyrics'
 import { normalizeMeta } from '@/tracks'
 import { AlbumLink, ArtistLink, Cover } from '@/tracks/components/details'
 
@@ -27,21 +30,21 @@ export function Player({ mini }: PlayerProps) {
   const meta = normalizeMeta(player.current)
   const isPlayerMaximized = useStore(store, state => state.isPlayerMaximized)
 
-  const [progress, setProgress] = useState(player.elapsed)
-  const [isSeeking, setIsSeeking] = useState(false)
-  const prevElapsed = useRef(player.elapsed)
+  const queryLyrics = useQuery({
+    queryKey: ['lyrics', player.current?.hash],
+    queryFn: async () => await getLyrics(player.current!),
+    enabled: !!player.current,
+  })
 
-  useLayoutEffect(() => {
-    if (!isSeeking && player.elapsed !== prevElapsed.current) {
-      setProgress(player.elapsed)
-    }
-
-    prevElapsed.current = player.elapsed
-  }, [player.elapsed, isSeeking])
+  const [showLyrics, setShowLyrics] = useState(false)
 
   return (
-    <div className={cn('flex flex-col items-center justify-center h-full isolate', mini && 'pb-6 pt-3')}>
-      {isPlayerMaximized && player.current?.cover && (
+    <div
+      className={cn('flex flex-col items-center justify-center h-full isolate', mini && 'pb-6 pt-3')}
+      onDoubleClick={() => {
+        if (!mini) setPlayerMaximized(!isPlayerMaximized)
+      }}>
+      {(isPlayerMaximized || mini) && player.current?.cover && (
         <div className="fixed -inset-10 -z-10 brightness-25 saturate-50 blur-2xl">
           <Image removeWrapper src={getAssetUrl(player.current.cover)} className="size-full object-cover" />
         </div>
@@ -60,9 +63,21 @@ export function Player({ mini }: PlayerProps) {
         </div>
       ) : (
         <>
-          <Cover url={player.current?.cover} className="size-80 mb-18" />
+          {!showLyrics || !queryLyrics.data ? (
+            <Cover url={player.current?.cover} className="size-80" />
+          ) : !queryLyrics.data.synced ? (
+            <PlainLyricsView data={queryLyrics.data.plain} className="size-full" />
+          ) : (
+            <SyncedLyricsView
+              data={queryLyrics.data.synced}
+              elapsed={player.elapsed}
+              duration={player.current?.duration}
+              onSeek={player.seek}
+              className="h-80"
+            />
+          )}
 
-          <div className="flex items-center gap-2 w-4/5 p-3">
+          <div className="flex items-center gap-2 w-4/5 p-3 mt-16">
             {meta.title && <div className="text-large mr-auto">{meta.title}</div>}
 
             {meta.album && <AlbumLink>{meta.album}</AlbumLink>}
@@ -71,25 +86,14 @@ export function Player({ mini }: PlayerProps) {
         </>
       )}
 
-      <div className={cn('flex flex-col mx-auto gap-3', mini ? 'w-full p-8' : 'w-4/5 p-3')}>
-        <Slider
-          size="sm"
-          color="foreground"
-          aria-label="Progress"
-          value={progress}
-          maxValue={player.current?.duration ?? -1}
-          onChange={value => {
-            setIsSeeking(true)
-            setProgress(typeof value === 'number' ? value : value[0])
-          }}
+      <div
+        className={cn('flex flex-col mx-auto gap-3', mini ? 'w-full p-8' : 'w-4/5 p-3')}
+        onDoubleClick={evt => evt.stopPropagation()}>
+        <SeekBar
+          onSeek={player.seek}
+          elapsed={player.elapsed}
+          duration={player.current?.duration}
           isDisabled={!player.current || !!player.error}
-          onChangeEnd={value => {
-            setIsSeeking(false)
-            const pos = typeof value === 'number' ? value : value[0]
-
-            player.seek(pos)
-            setProgress(pos)
-          }}
         />
 
         <div className="flex justify-between">
@@ -98,7 +102,23 @@ export function Player({ mini }: PlayerProps) {
         </div>
       </div>
 
-      <div className="flex w-full items-center justify-center gap-3">
+      <div className="flex w-full items-center justify-center gap-3 group" onDoubleClick={evt => evt.stopPropagation()}>
+        {!mini && (
+          <Button
+            size="sm"
+            radius="sm"
+            isDisabled={!queryLyrics.data}
+            variant={showLyrics ? 'flat' : 'light'}
+            onPress={() => setShowLyrics(!showLyrics)}
+            className={cn(
+              'w-28 mr-10 tracking-widest',
+              isPlayerMaximized &&
+                'opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-hover:disabled:opacity-50',
+            )}>
+            <LetterTextIcon className="text-medium text-default-500 shrink-0" /> LYRICS
+          </Button>
+        )}
+
         <Button
           isIconOnly
           radius="full"
@@ -117,24 +137,12 @@ export function Player({ mini }: PlayerProps) {
           <SkipBackIcon className="text-xl" />
         </Button>
 
-        <div className="relative">
-          {player.error && (
-            <Tooltip size="sm" radius="sm" className="bg-danger-100" content={player.error?.message}>
-              <div className="absolute inset-0 rounded-full" />
-            </Tooltip>
-          )}
-
-          <Button
-            isIconOnly
-            radius="full"
-            variant="flat"
-            className="size-20"
-            color={player.error ? 'danger' : 'secondary'}
-            isDisabled={!player.current || !!player.error}
-            onPress={player.togglePlay}>
-            {player.isPaused ? <PlayIcon className="text-2xl" /> : <PauseIcon className="text-2xl" />}
-          </Button>
-        </div>
+        <PlayButton
+          toggle={player.togglePlay}
+          current={player.current}
+          isPaused={player.isPaused}
+          error={player.error}
+        />
 
         <Button isIconOnly radius="full" variant="light" size="lg" onPress={player.next} isDisabled={!player.hasNext}>
           <SkipForwardIcon className="text-xl" />
@@ -149,6 +157,23 @@ export function Player({ mini }: PlayerProps) {
           onPress={player.toggleShuffle}>
           <ShuffleIcon className="text-lg" />
         </Button>
+
+        {!mini && (
+          <Button
+            as={Link}
+            size="sm"
+            radius="sm"
+            variant="light"
+            isDisabled={!player.current}
+            className={cn(
+              'w-28 ml-10 tracking-widest',
+              isPlayerMaximized &&
+                'opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-hover:disabled:opacity-50',
+            )}
+            to={`/tracks/${player.current?.hash}`}>
+            <AudioLinesIcon className="text-medium text-default-500 shrink-0" /> MANAGE
+          </Button>
+        )}
       </div>
     </div>
   )
@@ -160,9 +185,13 @@ export function MiniPlayer() {
       className="fixed w-160 flex flex-col bottom-6 right-6 border border-default/30
       bg-background/25 backdrop-blur-lg z-50 rounded-small shadow-small overflow-hidden">
       <div className="flex items-center p-2 z-10 gap-1">
-        <PictureInPicture2Icon className="text-lg text-default-300 ml-2" />
-
+        <PictureInPicture2Icon className="text-lg text-default-300 mx-2" />
         {/* // TODO: animate expansion */}
+
+        {/* <Button as={Link} to="/queue" size="sm" radius="sm" variant="light">
+          <ListVideoIcon className="text-medium text-default-500" /> Queue
+        </Button> */}
+
         <Button
           as={Link}
           to="/"
@@ -175,15 +204,8 @@ export function MiniPlayer() {
           <SquareArrowOutUpLeftIcon className="text-lg text-default-500" />
         </Button>
 
-        <Button
-          isIconOnly
-          size="sm"
-          radius="full"
-          variant="light"
-          color="danger"
-          className="text-foreground"
-          onPress={() => setMiniPlayerVisibility(false)}>
-          <XIcon className="text-lg" />
+        <Button isIconOnly size="sm" radius="full" variant="light" onPress={() => setMiniPlayerVisibility(false)}>
+          <XIcon className="text-lg text-default-500" />
         </Button>
       </div>
 

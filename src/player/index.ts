@@ -2,23 +2,17 @@ import { createStore, useStore } from 'zustand'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { addToast } from '@heroui/react'
-import { BackendPlayer, WebPlayer } from '@/player/types'
-import {
-  getNextIndex,
-  getPrevIndex,
-  invalidateInterval,
-  isEmotionRankingAllowed,
-  isRepeatCurrent,
-  selectPlayer,
-} from '@/player/utils'
+import { Interval } from '@/utils'
 import { rankUp } from '@/emotions'
 import { setMiniPlayerVisibility, setPlayerMaximized } from '@/settings'
+import { BackendPlayer, WebPlayer } from '@/player/types'
 import type { ShortcutHandler } from '@tauri-apps/plugin-global-shortcut'
 import type { Track } from '@/tracks'
 import type { Player } from '@/player/types'
 
 const backendPlayer = new BackendPlayer()
 const webPlayer = new WebPlayer()
+const interval = new Interval(1000, onElapsed)
 
 function initialState(): Store {
   return {
@@ -26,7 +20,6 @@ function initialState(): Store {
     current: 0,
     elapsed: 0,
     isPaused: true,
-    interval: null,
     repeat: null,
     template: null,
     isShuffled: false,
@@ -37,39 +30,41 @@ function initialState(): Store {
 
 export const store = createStore<Store>(initialState)
 
-// NOTE: if not paused, invalidate the interval and create a new one
-// TODO: test any issues with context switching b/w players
-
 // this contains the core logic for all the navigations and context switching
 export async function goto(index: number, using?: Player) {
   const state = store.getState()
-  if (!state.isPaused) invalidateInterval(state.interval)
+  if (!state.isPaused) interval.stop()
 
   const track = state.queue[index]
-  const player = using ?? selectPlayer(track, [backendPlayer, webPlayer])
+  const player = using ?? backendPlayer
 
   // case: stop the previous player
   if (player !== state.player) state.player.stop()
 
   try {
     await player.goto(index)
-    const interval = !state.isPaused ? createInterval() : null
+    if (!state.isPaused) interval.start()
 
     // case: replace with metadata from the web player
     let queue = state.queue
 
-    if (player instanceof WebPlayer) {
-      const newQueue = Array.from(queue)
-      const duration = await player.getDuration()
+    try {
+      if (player instanceof WebPlayer) {
+        const newQueue = Array.from(queue)
+        const duration = await player.getDuration()
 
-      newQueue[index].duration = duration
-      queue = newQueue
+        newQueue[index].duration = duration
+        queue = newQueue
+      }
+
+      // case: continue the playback if the player is not paused while navigating
+      if (!state.isPaused) await player.play()
+    } catch (err) {
+      interval.stop()
+      throw err
     }
 
-    // case: continue the playback if the player is not paused while navigating
-    if (!state.isPaused) await player.play()
-
-    store.setState({ current: index, elapsed: 0, interval, error: null, player })
+    store.setState({ current: index, queue, elapsed: 0, error: null, player })
   } catch (err) {
     console.error(err, track)
 
@@ -85,22 +80,23 @@ export async function goto(index: number, using?: Player) {
 
 export async function seek(elapsed: number) {
   const state = store.getState()
-  if (!state.isPaused) invalidateInterval(state.interval)
+  if (state.elapsed === elapsed) return
 
+  if (!state.isPaused) interval.stop()
   await state.player.seek(elapsed)
-  const interval = !state.isPaused ? createInterval() : null
+  if (!state.isPaused) interval.start()
 
-  store.setState({ elapsed, interval })
+  store.setState({ elapsed })
 }
 
 export async function pause() {
   const state = store.getState()
   if (state.isPaused || state.error) return
 
-  invalidateInterval(state.interval)
+  interval.stop()
   await state.player.pause()
 
-  store.setState({ interval: null, isPaused: true })
+  store.setState({ isPaused: true })
 }
 
 export async function play() {
@@ -108,9 +104,9 @@ export async function play() {
   if (!state.isPaused || state.error) return
 
   await state.player.play()
-  const interval = createInterval()
+  interval.start()
 
-  store.setState({ interval, isPaused: false })
+  store.setState({ isPaused: false })
 }
 
 export async function playTracks(data: Track | Track[], from = 0) {
@@ -159,17 +155,11 @@ export async function reset() {
   await setCurrent(0)
   await stop()
 
-  const state = store.getState()
-  invalidateInterval(state.interval)
-
+  interval.stop()
   store.setState(initialState())
 }
 
-function createInterval() {
-  return setInterval(progress, 1000)
-}
-
-function progress() {
+function onElapsed() {
   const state = store.getState()
   const current = state.queue.at(state.current)
 
@@ -219,7 +209,8 @@ export function setRepeat(repeat: Repeat | null) {
 export async function extendQueue(tracks: Track[]) {
   const state = store.getState()
 
-  const filtered = tracks.filter(track => !state.queue.includes(track))
+  // NOTE: not comparing by reference because the tracks can be from different sources
+  const filtered = tracks.filter(track => !state.queue.some(it => it.hash === track.hash))
   const queue = state.queue.concat(filtered)
 
   await setQueue(queue)
@@ -249,14 +240,15 @@ export async function setVolume(volume: number) {
 export function usePlayer() {
   const state = useStore(store)
 
+  // TODO: remove standalone functions
   return {
     setState: store.setState,
     toggleShuffle: state.isShuffled ? unshuffle : shuffle,
     togglePlay: state.isPaused ? play : pause,
     current: state.queue.at(state.current),
     isRepeatCurrent: isRepeatCurrent(state.repeat),
-    hasPrev: getPrevIndex(state) !== -1,
-    hasNext: getNextIndex(state) !== -1,
+    hasPrev: getPrevIndex(state) >= 0,
+    hasNext: getNextIndex(state) >= 0,
     isShuffled: state.isShuffled,
     isPaused: state.isPaused,
     elapsed: state.elapsed,
@@ -295,6 +287,28 @@ export async function init() {
   await playArbitraryTracks(tracks)
 }
 
+type GetIndexParams = Pick<Store, 'queue' | 'current' | 'repeat'>
+
+export function getNextIndex({ queue, current, repeat }: GetIndexParams) {
+  if (isRepeatCurrent(repeat)) return current
+  if (queue.length > current + 1) return current + 1
+  return repeat ? 0 : -1
+}
+
+export function getPrevIndex({ queue, current, repeat }: GetIndexParams) {
+  if (isRepeatCurrent(repeat)) return current
+  if (current > 0) return current - 1
+  return repeat ? queue.length - 1 : -1
+}
+
+export function isRepeatCurrent(repeat: Repeat | null) {
+  return repeat?.[0] === 'c'
+}
+
+export function isEmotionRankingAllowed(template?: Template | null) {
+  return !template // || (template[0] !== 'e' && template[0] !== 'a')
+}
+
 export const onGlobalShortcut: ShortcutHandler = evt => {
   if (evt.state === 'Released') return
   const state = store.getState()
@@ -314,8 +328,6 @@ export const onGlobalShortcut: ShortcutHandler = evt => {
   }
 }
 
-export type Timeout = ReturnType<typeof setInterval>
-
 export type Template = 'emotions' | 'arbitrary'
 
 export type Repeat = 'current' | 'all'
@@ -325,8 +337,6 @@ export type Store = {
   current: number
   elapsed: number
   isPaused: boolean
-  // interval is null if the player is paused
-  interval: Timeout | null
   repeat: Repeat | null
   template: Template | null
   isShuffled: boolean
@@ -335,5 +345,3 @@ export type Store = {
   error?: Error | null
   player: Player
 }
-
-export type GetIndexParams = Pick<Store, 'queue' | 'current' | 'repeat'>

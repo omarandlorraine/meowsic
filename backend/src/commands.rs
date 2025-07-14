@@ -1,5 +1,5 @@
 use crate::db::{Emotion, GetTracksFilters};
-use crate::tracks::{Album, Track, find_artist_image};
+use crate::tracks::{Album, Lyrics, Track, find_artist_image};
 use crate::{AppState, Error};
 use std::path::PathBuf;
 use tauri::State;
@@ -75,11 +75,66 @@ pub fn player_get_arbitrary_tracks(state: State<AppState, '_>) -> Result<Vec<Tra
 }
 
 #[tauri::command]
+pub fn scrub_player_start(state: State<AppState, '_>) -> Result<(), Error> {
+    state.scrub_player.lock().start()?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn scrub_player_set_current(
+    state: State<AppState, '_>,
+    path: Option<PathBuf>,
+) -> Result<(), Error> {
+    state.scrub_player.lock().set_current(path);
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn scrub_player_seek(state: State<AppState, '_>, elapsed: u64) -> Result<(), Error> {
+    state.scrub_player.lock().seek(elapsed)?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn scrub_player_stop(state: State<AppState, '_>) -> Result<(), Error> {
+    state.scrub_player.lock().stop();
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn scrub_player_play(state: State<AppState, '_>) -> Result<(), Error> {
+    state.scrub_player.lock().play();
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn scrub_player_pause(state: State<AppState, '_>) -> Result<(), Error> {
+    state.scrub_player.lock().pause();
+
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn db_get_tracks(
     state: State<AppState, '_>,
     filters: GetTracksFilters,
 ) -> Result<Vec<Track>, Error> {
     let res = state.db.get_tracks(&filters).await?;
+
+    Ok(res)
+}
+
+#[tauri::command]
+pub async fn db_get_track(
+    state: State<AppState, '_>,
+    hash: String,
+) -> Result<Option<Track>, Error> {
+    let res = state.db.get_track(&hash).await?;
 
     Ok(res)
 }
@@ -210,6 +265,38 @@ pub async fn db_get_artists(state: State<AppState, '_>) -> Result<Vec<String>, E
 }
 
 #[tauri::command]
+pub async fn db_get_lyrics(
+    state: State<AppState, '_>,
+    hash: String,
+) -> Result<Option<Lyrics>, Error> {
+    let res = state.db.get_lyrics(&hash).await?;
+
+    Ok(res)
+}
+
+#[tauri::command]
+pub async fn db_set_lyrics(
+    state: State<AppState, '_>,
+    hash: String,
+    lyrics: Option<Lyrics>,
+) -> Result<(), Error> {
+    state.db.set_lyrics(&hash, lyrics.as_ref()).await?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn db_set_rules(
+    state: State<AppState, '_>,
+    hash: String,
+    rules: Option<String>,
+) -> Result<(), Error> {
+    state.db.set_rules(&hash, rules.as_ref()).await?;
+
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn db_scan_dirs(state: State<AppState, '_>) -> Result<String, Error> {
     let dirs = state.db.get_dirs().await?;
     let res = state.db.scan_dirs(&dirs).await?;
@@ -229,6 +316,27 @@ pub async fn db_get_dirs(state: State<AppState, '_>) -> Result<Vec<String>, Erro
     let res = state.db.get_dirs().await?;
 
     Ok(res)
+}
+
+#[tauri::command]
+pub async fn db_backup(state: State<AppState, '_>, dir: PathBuf) -> Result<PathBuf, Error> {
+    let res = state.db.backup(&dir).await?;
+
+    Ok(res)
+}
+
+#[tauri::command]
+pub async fn db_restore(state: State<AppState, '_>, path: PathBuf) -> Result<(), Error> {
+    state.db.restore(&path).await?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn db_reset(state: State<AppState, '_>) -> Result<(), Error> {
+    state.db.reset().await?;
+
+    Ok(())
 }
 
 #[tauri::command]
