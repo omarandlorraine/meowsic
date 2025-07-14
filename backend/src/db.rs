@@ -515,8 +515,6 @@ impl Db {
             let file = zip.by_index(i)?;
 
             if file.name().starts_with("playlist") {
-                continue;
-
                 let data: JsonValue = serde_json::from_reader(file)?;
 
                 if let (Some(name), Some(list)) = (data["name"].as_str(), data["list"].as_array()) {
@@ -539,6 +537,11 @@ impl Db {
                     // NOTE: doing one transaction per playlist
                     let mut tx = self.pool.begin().await?;
 
+                    sqlx::query("INSERT OR IGNORE INTO playlists (name) VALUES ($1)")
+                        .bind(&playlist_name)
+                        .execute(&mut *tx)
+                        .await?;
+
                     let mut qb = QueryBuilder::new(
                         "INSERT OR IGNORE INTO playlist_tracks (playlist_name, track_hash, position) ",
                     );
@@ -548,11 +551,6 @@ impl Db {
                             .push_bind(hash)
                             .push_bind(position);
                     });
-
-                    sqlx::query("INSERT OR IGNORE INTO playlists (name) VALUES ($1)")
-                        .bind(&playlist_name)
-                        .execute(&mut *tx)
-                        .await?;
 
                     qb.build().execute(&mut *tx).await?;
                     tx.commit().await?;
