@@ -68,7 +68,7 @@ export async function goto(index: number, using?: Player) {
       throw err
     }
 
-    store.setState({ current: index, elapsed: 0, interval, error: null, player })
+    store.setState({ current: index, queue, elapsed: 0, interval, error: null, player })
   } catch (err) {
     console.error(err, track)
 
@@ -84,6 +84,8 @@ export async function goto(index: number, using?: Player) {
 
 export async function seek(elapsed: number) {
   const state = store.getState()
+  if (state.elapsed === elapsed) return
+
   if (!state.isPaused) invalidateInterval(state.interval)
 
   await state.player.seek(elapsed)
@@ -164,7 +166,6 @@ export async function reset() {
   store.setState(initialState())
 }
 
-// TODO: ? auto clean up the interval
 function createInterval() {
   return setInterval(progress, 1000)
 }
@@ -257,8 +258,8 @@ export function usePlayer() {
     togglePlay: state.isPaused ? play : pause,
     current: state.queue.at(state.current),
     isRepeatCurrent: isRepeatCurrent(state.repeat),
-    hasPrev: getPrevIndex(state) !== -1,
-    hasNext: getNextIndex(state) !== -1,
+    hasPrev: getPrevIndex(state) >= 0,
+    hasNext: getNextIndex(state) >= 0,
     isShuffled: state.isShuffled,
     isPaused: state.isPaused,
     elapsed: state.elapsed,

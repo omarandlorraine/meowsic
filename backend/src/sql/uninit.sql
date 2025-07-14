@@ -1,0 +1,13 @@
+DELETE FROM playlists;
+DELETE FROM emotions;
+DELETE FROM lyrics;
+DELETE FROM ruleset;
+
+DROP TABLE IF EXISTS dirs;
+DROP TABLE IF EXISTS playlist_tracks;
+DROP TABLE IF EXISTS emotion_tracks;
+DROP TABLE IF EXISTS playlists;
+DROP TABLE IF EXISTS emotions;
+DROP TABLE IF EXISTS lyrics;
+DROP TABLE IF EXISTS ruleset;
+DROP TABLE IF EXISTS tracks;

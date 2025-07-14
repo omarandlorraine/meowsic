@@ -49,6 +49,7 @@ export function SettingsScreen() {
 
   const mutationScan = useMutation({
     mutationFn: scanDirs,
+    onError: err => addToast({ timeout: 5000, color: 'danger', title: err.message }),
     onSuccess: result => {
       addToast({
         timeout: 5000,
@@ -57,11 +58,11 @@ export function SettingsScreen() {
         color: result.startsWith('[ERR]') ? 'danger' : 'success',
       })
     },
-    onError: err => addToast({ timeout: 5000, color: 'danger', title: err.message }),
   })
 
   const mutationBackup = useMutation({
     mutationFn: async (dir: string) => await backup(dir),
+    onError: err => addToast({ timeout: 5000, color: 'danger', title: err.message }),
     onSuccess: path => {
       addToast({
         timeout: 5000,
@@ -78,6 +79,7 @@ export function SettingsScreen() {
 
   const mutationRestore = useMutation({
     mutationFn: async (path: string) => await restore(path),
+    onError: err => addToast({ timeout: 5000, color: 'danger', title: err.message }),
     onSuccess: () => {
       addToast({ timeout: 5000, color: 'success', title: 'Backup Restored' })
     },
@@ -205,7 +207,7 @@ export function SettingsScreen() {
             isLoading={mutationBackup.isPending}
             onPress={async () => {
               const selected = await open({
-                defaultPath: 'meowsic-backup.zip',
+                defaultPath: 'meowsic_backup.zip',
                 filters: [{ name: 'Backup', extensions: ['zip'] }],
               })
 

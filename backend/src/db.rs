@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue, json};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Pool, QueryBuilder, Sqlite};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -515,30 +515,41 @@ impl Db {
             let file = zip.by_index(i)?;
 
             if file.name().starts_with("playlist") {
+                continue;
+
                 let data: JsonValue = serde_json::from_reader(file)?;
 
                 if let (Some(name), Some(list)) = (data["name"].as_str(), data["list"].as_array()) {
-                    // NOTE: doing one transaction per playlist
-                    let mut tx = self.pool.begin().await?;
                     let playlist_name = format!("{name} (Restored)"); // TODO: time suffix
+                    let mut map = HashMap::new();
 
-                    let mut qb = QueryBuilder::new(
-                        "INSERT INTO playlist_tracks (playlist_name, track_hash, position) ",
-                    );
-
-                    qb.push_values(list.iter().take(32000), |mut b, json| {
+                    for json in list {
                         if let (Some(file_name), Some(position)) =
                             (json["file_name"].as_str(), json["position"].as_i64())
                         {
                             let hash = utils::hash(file_name.as_bytes());
-
-                            b.push_bind(&playlist_name)
-                                .push_bind(hash)
-                                .push_bind(position);
+                            map.insert(hash, position);
                         }
+                    }
+
+                    if map.is_empty() {
+                        continue;
+                    }
+
+                    // NOTE: doing one transaction per playlist
+                    let mut tx = self.pool.begin().await?;
+
+                    let mut qb = QueryBuilder::new(
+                        "INSERT OR IGNORE INTO playlist_tracks (playlist_name, track_hash, position) ",
+                    );
+
+                    qb.push_values(map.iter().take(32000), |mut b, (hash, position)| {
+                        b.push_bind(&playlist_name)
+                            .push_bind(hash)
+                            .push_bind(position);
                     });
 
-                    sqlx::query("INSERT INTO playlists (name) VALUES ($1)")
+                    sqlx::query("INSERT OR IGNORE INTO playlists (name) VALUES ($1)")
                         .bind(&playlist_name)
                         .execute(&mut *tx)
                         .await?;
@@ -550,21 +561,75 @@ impl Db {
                 let data: JsonValue = serde_json::from_reader(file)?;
 
                 if let (Some(name), Some(list)) = (data["name"].as_str(), data["list"].as_array()) {
-                    let mut qb = QueryBuilder::new(
-                        "INSERT OR IGNORE INTO emotion_tracks (emotion_name, track_hash, rank) ",
-                    );
+                    let mut map = HashMap::new();
 
-                    qb.push_values(list.iter().take(32000), |mut b, json| {
+                    for json in list {
                         if let (Some(file_name), Some(rank)) =
                             (json["file_name"].as_str(), json["rank"].as_i64())
                         {
                             let hash = utils::hash(file_name.as_bytes());
-
-                            b.push_bind(name).push_bind(hash).push_bind(rank);
+                            map.insert(hash, rank);
                         }
-                    });
+                    }
 
-                    qb.build().execute(&self.pool).await?;
+                    if map.is_empty() {
+                        continue;
+                    }
+
+                    QueryBuilder::new(
+                        "INSERT OR IGNORE INTO emotion_tracks (emotion_name, track_hash, rank) ",
+                    )
+                    .push_values(map.iter().take(32000), |mut b, (hash, rank)| {
+                        b.push_bind(name).push_bind(hash).push_bind(rank);
+                    })
+                    .build()
+                    .execute(&self.pool)
+                    .await?;
+                }
+            } else if file.name().starts_with("tracks_extended") {
+                let data: Vec<JsonValue> = serde_json::from_reader(file)?;
+
+                let mut lyrics_map: HashMap<String, Lyrics> = HashMap::new();
+                let mut rules_map = HashMap::new();
+
+                for item in data {
+                    match (
+                        item["file_name"].as_str(),
+                        serde_json::from_value(item["lyrics"].clone()),
+                        item["rules"].as_str(),
+                    ) {
+                        (Some(file_name), Err(_), Some(rules)) => {
+                            let hash = utils::hash(file_name.as_bytes());
+                            rules_map.insert(hash, rules.to_string());
+                        }
+                        (Some(file_name), Ok(lyrics), None) => {
+                            let hash = utils::hash(file_name.as_bytes());
+                            lyrics_map.insert(hash, lyrics);
+                        }
+                        _ => {}
+                    }
+                }
+
+                if !lyrics_map.is_empty() {
+                    QueryBuilder::new("INSERT OR IGNORE INTO lyrics (track_hash, plain, synced) ")
+                        .push_values(lyrics_map.iter().take(32000), |mut b, (hash, lyrics)| {
+                            b.push_bind(hash)
+                                .push_bind(&lyrics.plain)
+                                .push_bind(&lyrics.synced);
+                        })
+                        .build()
+                        .execute(&self.pool)
+                        .await?;
+                }
+
+                if !rules_map.is_empty() {
+                    QueryBuilder::new("INSERT OR IGNORE INTO ruleset (track_hash, rules) ")
+                        .push_values(rules_map.iter().take(32000), |mut b, (hash, rules)| {
+                            b.push_bind(hash).push_bind(rules);
+                        })
+                        .build()
+                        .execute(&self.pool)
+                        .await?;
                 }
             }
         }
@@ -639,7 +704,41 @@ impl Db {
             zip.write_all(serde_json::to_string(&data)?.as_bytes())?;
         }
 
-        // TODO: lyrics
+        let list: Vec<TrackExtendedRow> = sqlx::query_as(
+            "
+            SELECT
+                t.name AS name,
+                t.extension AS extension,
+                l.plain AS plain_lyrics,
+                l.synced AS synced_lyrics,
+                r.rules AS rules
+            FROM tracks AS t
+            LEFT JOIN lyrics AS l ON l.track_hash = t.hash
+            LEFT JOIN ruleset AS r ON r.track_hash = t.hash
+            WHERE 
+                (l.id IS NOT NULL) OR (r.id IS NOT NULL AND r.rules <> '')
+            ",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        if !list.is_empty() {
+            let data = list.into_iter().map(|item| {
+                json!({
+                    "file_name": format!("{}.{}", item.name, item.extension),
+                    "rules": item.rules.filter(|x| !x.trim().is_empty()),
+                    "lyrics": (item.plain_lyrics.is_some() || item.synced_lyrics.is_some()).then(|| {
+                        Lyrics {
+                            plain: item.plain_lyrics.unwrap_or_default(),
+                            synced: item.synced_lyrics.unwrap_or_default()
+                        }
+                    }),
+                })
+            }).collect::<Vec<_>>();
+
+            zip.start_file("tracks_extended.json", ZipFileOptions::default())?;
+            zip.write_all(serde_json::to_string(&data)?.as_bytes())?;
+        }
 
         zip.finish()?;
 
@@ -649,20 +748,9 @@ impl Db {
     pub async fn reset(&self) -> Result<()> {
         _ = fs::remove_dir_all(&self.covers_path);
 
-        // TODO: have to see if this is safe
-        _ = sqlx::query(
-            "
-            DROP TABLE IF EXISTS dirs;
-            DROP TABLE IF EXISTS tracks;
-            DROP TABLE IF EXISTS playlists;
-            DROP TABLE IF EXISTS emotions;
-            DROP TABLE IF EXISTS lyrics;
-            DROP TABLE IF EXISTS playlist_tracks;
-            DROP TABLE IF EXISTS emotion_tracks;
-            ",
-        )
-        .execute(&self.pool)
-        .await;
+        sqlx::query(include_str!("sql/uninit.sql"))
+            .execute(&self.pool)
+            .await?;
 
         self.init().await?;
 
@@ -699,6 +787,15 @@ pub struct TrackRow {
     pub position: Option<i64>,
     #[sqlx(default)]
     pub rank: Option<i64>,
+}
+
+#[derive(sqlx::FromRow, Debug, Serialize, Deserialize)]
+pub struct TrackExtendedRow {
+    pub name: String,
+    pub extension: String,
+    pub plain_lyrics: Option<String>,
+    pub synced_lyrics: Option<String>,
+    pub rules: Option<String>,
 }
 
 #[derive(sqlx::FromRow, Debug, Serialize, Deserialize)]
