@@ -43,5 +43,9 @@
         "scope": ["**/*"]
       }
     }
+  },
+  "bundle": {
+      "active": true,
+      "targets": ["deb", "msi"]
   }
 }
